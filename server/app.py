@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import uvicorn
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 try:
@@ -27,9 +27,9 @@ except Exception:
     from models import DesignGymAction, DesignGymObservation
 
 try:
-    from .DesignGym_environment import DesignGymEnvironment
+    from .DesignGym_environment import DesignGymEnvironment, TASKS
 except Exception:
-    from server.DesignGym_environment import DesignGymEnvironment
+    from server.DesignGym_environment import DesignGymEnvironment, TASKS
 
 
 app = create_fastapi_app(
@@ -43,6 +43,34 @@ ASSETS_DIR = ROOT_DIR / "assets"
 
 if ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+
+
+def _task_description(task_id: str) -> str:
+    if task_id == "poster_basic_v1":
+        return "Poster layout optimization with hero image, title hierarchy, CTA placement, and alignment."
+    if task_id == "editorial_cover_v1":
+        return "Editorial cover optimization with masthead preservation, headline stack, and reading order."
+    if task_id == "dense_flyer_v1":
+        return "Dense flyer optimization with support-group reflow, spacing, occupancy, and caption alignment."
+    return "Design layout optimization task."
+
+
+def _task_catalog():
+    catalog = []
+    for task_id, spec in TASKS.items():
+        catalog.append(
+            {
+                "task_id": task_id,
+                "graded": True,
+                "grader": "deterministic_layout_utility",
+                "description": _task_description(task_id),
+                "max_steps": int(spec.get("max_steps", 0)),
+                "instance_id": spec.get("instance_id"),
+                "reward_range": [0.0, 1.0],
+                "score_range": [0.0, 1.0],
+            }
+        )
+    return catalog
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -165,9 +193,6 @@ def home() -> str:
             color: var(--muted);
             line-height: 1.85;
           }}
-          li + li {{
-            margin-top: 4px;
-          }}
           .links {{
             display: grid;
             gap: 12px;
@@ -233,7 +258,6 @@ def home() -> str:
             editorial covers, and dense flyers. The agent improves alignment, hierarchy, spacing,
             reading order, occupancy, and semantic placement through structured actions.
           </p>
-          <br>
 
           {image_block}
 
@@ -243,14 +267,15 @@ def home() -> str:
                 <h2>What this Space serves</h2>
                 <p>
                   This Hugging Face Space hosts the live OpenEnv-compatible DesignGym environment.
-                  It is designed for evaluation, inference, and deployment testing.
                 </p>
                 <ul>
-                  <li><code>POST /reset</code> starts a task episode</li>
-                  <li><code>POST /step</code> applies an action</li>
-                  <li><code>GET /state</code> returns the live state</li>
-                  <li><code>GET /health</code> returns a health check</li>
-                  <li><code>/docs</code> shows FastAPI/OpenAPI docs</li>
+                  <li><code>POST /reset</code></li>
+                  <li><code>POST /step</code></li>
+                  <li><code>GET /state</code></li>
+                  <li><code>GET /health</code></li>
+                  <li><code>GET /info</code></li>
+                  <li><code>GET /tasks</code></li>
+                  <li><a href="/docs">/docs</a></li>
                 </ul>
               </div>
             </div>
@@ -262,6 +287,14 @@ def home() -> str:
                   <a class="link-card" href="/docs">
                     <span class="link-title">API Docs</span>
                     <span class="link-sub">Inspect endpoints and schemas</span>
+                  </a>
+                  <a class="link-card" href="/info">
+                    <span class="link-title">Environment Info</span>
+                    <span class="link-sub">Task and grader metadata</span>
+                  </a>
+                  <a class="link-card" href="/tasks">
+                    <span class="link-title">Task List</span>
+                    <span class="link-sub">Discover all available tasks</span>
                   </a>
                   <a class="link-card" href="/health">
                     <span class="link-title">Health Check</span>
@@ -283,6 +316,33 @@ def home() -> str:
       </body>
     </html>
     """
+
+
+@app.get("/info")
+def info():
+    tasks = _task_catalog()
+    return JSONResponse(
+        {
+            "name": "DesignGym",
+            "description": "OpenEnv-compatible reinforcement learning environment for design layout optimization.",
+            "task_count": len(tasks),
+            "default_task_id": "poster_basic_v1",
+            "tasks": tasks,
+            "reward_range": [0.0, 1.0],
+            "score_range": [0.0, 1.0],
+            "supports_seeded_reset": True,
+            "supports_task_id_reset": True,
+        }
+    )
+
+
+@app.get("/tasks")
+def tasks():
+    return JSONResponse(
+        {
+            "tasks": _task_catalog()
+        }
+    )
 
 
 def main() -> None:
