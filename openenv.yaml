@@ -5,3 +5,39 @@ runtime: fastapi
 app: server.app:app
 port: 8000
 
+tasks:
+  - id: poster_basic_v1
+    difficulty: easy
+    description: Poster layout optimization with hero image, title hierarchy, CTA placement, and alignment.
+    max_steps: 7
+    reward_range: [0.0, 1.0]
+    score_range: [0.0, 1.0]
+    grader:
+      type: programmatic
+      name: deterministic_layout_utility
+      deterministic: true
+      source: server/DesignGym_environment.py
+
+  - id: editorial_cover_v1
+    difficulty: medium
+    description: Editorial cover optimization with masthead preservation, headline stack, and reading order.
+    max_steps: 9
+    reward_range: [0.0, 1.0]
+    score_range: [0.0, 1.0]
+    grader:
+      type: programmatic
+      name: deterministic_layout_utility
+      deterministic: true
+      source: server/DesignGym_environment.py
+
+  - id: dense_flyer_v1
+    difficulty: hard
+    description: Dense flyer optimization with support-group reflow, spacing, occupancy, and caption alignment.
+    max_steps: 10
+    reward_range: [0.0, 1.0]
+    score_range: [0.0, 1.0]
+    grader:
+      type: programmatic
+      name: deterministic_layout_utility
+      deterministic: true
+      source: server/DesignGym_environment.py

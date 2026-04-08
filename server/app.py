@@ -56,13 +56,25 @@ def _task_description(task_id: str) -> str:
 
 
 def _task_catalog():
+    difficulty_map = {
+        "poster_basic_v1": "easy",
+        "editorial_cover_v1": "medium",
+        "dense_flyer_v1": "hard",
+    }
+
     catalog = []
     for task_id, spec in TASKS.items():
         catalog.append(
             {
                 "task_id": task_id,
+                "difficulty": difficulty_map.get(task_id, "medium"),
                 "graded": True,
-                "grader": "deterministic_layout_utility",
+                "grader": {
+                    "type": "programmatic",
+                    "name": "deterministic_layout_utility",
+                    "deterministic": True,
+                    "source": "server/DesignGym_environment.py",
+                },
                 "description": _task_description(task_id),
                 "max_steps": int(spec.get("max_steps", 0)),
                 "instance_id": spec.get("instance_id"),
@@ -71,7 +83,6 @@ def _task_catalog():
             }
         )
     return catalog
-
 
 @app.get("/", response_class=HTMLResponse)
 def home() -> str:
