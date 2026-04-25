@@ -1,3 +1,25 @@
+window.addEventListener("error", (event) => {
+  document.body.innerHTML = `
+    <pre style="white-space:pre-wrap;color:white;background:#111827;padding:24px;font-size:16px;">
+JS ERROR:
+${event.message}
+
+File: ${event.filename}
+Line: ${event.lineno}
+Column: ${event.colno}
+    </pre>
+  `;
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  document.body.innerHTML = `
+    <pre style="white-space:pre-wrap;color:white;background:#111827;padding:24px;font-size:16px;">
+PROMISE ERROR:
+${event.reason}
+    </pre>
+  `;
+});
+
 let lastObservation = null;
 let lastState = null;
 
@@ -130,19 +152,33 @@ async function refresh() {
 }
 
 async function resetEnv() {
-  const task = document.getElementById("task").value;
+  try {
+    const task = document.getElementById("task").value;
 
-  const res = await fetch("/demo/reset", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({task_id: task, seed: 0})
-  });
+    const res = await fetch("/demo/reset", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({task_id: task, seed: 0})
+    });
 
-  const payload = await res.json();
-  lastObservation = payload.observation || payload;
-  lastState = payload.state || null;
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Reset failed HTTP ${res.status}: ${text}`);
+    }
 
-  await refresh();
+    const payload = await res.json();
+    lastObservation = payload.observation || payload;
+    lastState = payload.state || null;
+
+    await refresh();
+  } catch (err) {
+    document.body.innerHTML = `
+      <pre style="white-space:pre-wrap;color:white;background:#111827;padding:24px;font-size:16px;">
+RESET ERROR:
+${err}
+      </pre>
+    `;
+  }
 }
 
 function layoutHas(id) {

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import uvicorn
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse 
 from fastapi.staticfiles import StaticFiles
 from fastapi import Request
 
@@ -46,10 +46,31 @@ ASSETS_DIR = ROOT_DIR / "assets"
 
 if ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+    
 WEB_DIR = ROOT_DIR / "web"
 
-if WEB_DIR.exists():
-    app.mount("/web", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
+
+@app.get("/", include_in_schema=False)
+def home():
+    return FileResponse(str(WEB_DIR / "index.html"))
+
+
+@app.get("/web", include_in_schema=False)
+def web_index_no_slash():
+    return FileResponse(str(WEB_DIR / "index.html"))
+
+
+@app.get("/web/", include_in_schema=False)
+def web_index():
+    return FileResponse(str(WEB_DIR / "index.html"))
+
+
+@app.get("/web/{path:path}", include_in_schema=False)
+def web_static(path: str):
+    file_path = WEB_DIR / path
+    if not file_path.exists() or not file_path.is_file():
+        return FileResponse(str(WEB_DIR / "index.html"))
+    return FileResponse(str(file_path))
 
 def _task_description(task_id: str) -> str:
     if task_id == "poster_basic_v1":
