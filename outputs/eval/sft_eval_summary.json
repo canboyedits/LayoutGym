@@ -1,0 +1,17 @@
+{
+  "model": "unsloth/Qwen2.5-0.5B-Instruct",
+  "train_examples": 3898,
+  "eval_examples": 434,
+  "eval_subset": 100,
+  "valid_json_rate": 1.0,
+  "valid_action_rate": 1.0,
+  "generated_action_counts": {
+    "resize": 23,
+    "anchor_to_region": 40,
+    "finalize": 4,
+    "promote": 24,
+    "apply_template": 5,
+    "reflow_group": 4
+  },
+  "adapter_dir": "/content/drive/MyDrive/DesignGym2/runs/sft_qwen05/designgym2_sft_qwen05_adapter"
+}
