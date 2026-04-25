@@ -112,6 +112,9 @@ def info():
         }
     )
 
+@app.get("/demo/ping")
+def demo_ping():
+    return {"ok": True, "message": "DesignGym 2.0 demo endpoints are live"}
 
 @app.get("/tasks")
 def tasks():
