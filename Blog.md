@@ -16,19 +16,8 @@ Not a one-shot generator. Not a template-picker. An *agent* that looks at a layo
 
 That's what this project is. And it's bigger than posters.
 
----
-
-## 🔗 Project Links
-
-
-| Resource                         | Link                                                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 🌍 **Environment (HF Space)**    | [DesignGym Environment Server](https://huggingface.co/spaces/yashvyasop/DesignGym)                           |
-| 💻 **GitHub Repo**               | [canboyedits/DesignGym](https://github.com/canboyedits/DesignGym)                                            |
-| 🧠 **SFT Trained Adapter**       | [designgym2-sft-qwen05-lora](https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora)                   |
-| 📓 **Training Notebook (Colab)** | [grpo_train_colab.ipynb](https://github.com/canboyedits/DesignGym/blob/main/training/grpo_train_colab.ipynb) |
-| 📊 **Training Logs**             | [HF Training Job](https://huggingface.co/jobs/yashvyasop/69ed7b02d70108f37acdf597)                           |
-
+![DesignGym architecture](assets/Architectural_Diagram.png)
+*Figure 1 — End-to-end architecture: the OpenEnv-compliant DesignGym environment, the heuristic planner that bootstraps SFT data, the SFT adapter that locks in the action interface, and the GRPO trainer that learns design preference from verifiable reward.*
 
 ---
 
@@ -56,6 +45,20 @@ DesignGym proves this framework works for graphic design. The architecture is a 
 
 ---
 
+## 🔗 Project Links
+
+| Resource | Link |
+|---|---|
+| 🌍 **Environment (HF Space)** | [DesignGym Environment Server](https://huggingface.co/spaces/yashvyasop/DesignGym) |
+| 💻 **GitHub Repo** | [canboyedits/DesignGym](https://github.com/canboyedits/DesignGym) |
+| 🧠 **SFT Trained Adapter** | [designgym2-sft-qwen05-lora](https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora) |
+| 📓 **GRPO Training Notebook** | [grpo_train_colab.ipynb](https://colab.research.google.com/drive/1jw1waO-bc0Mk3U7-RBbomsIGFBWvA0aW?usp=sharing) |
+| 📓 **SFT Training Notebook** | [SFT_training_script.ipynb](https://colab.research.google.com/drive/1ZtjQSen19Sdmx8FOXvM-nb_AFDSNM_1C?usp=sharing) |
+| 📓 **Evaluation Notebook** | [evaluate_base_vs_sft.ipynb](https://colab.research.google.com/drive/1U1t9GVkc8sk2BeYCxoDnlHV1WMjYCpv1?usp=sharing) |
+| 📊 **Training Logs** | [HF Training Job](https://huggingface.co/jobs/yashvyasop/69ed7b02d70108f37acdf597) |
+
+---
+
 ## 🤔 Why Not Just Generate the Layout?
 
 Because that's not how it works in the real world.
@@ -74,16 +77,14 @@ This matters because layout improvement is an **optimization problem**, not a ge
 
 ## 🔬 Round 1 → Round 2: What Changed?
 
-
-| Area           | DesignGym Round 1                        | DesignGym 2.0                                      |
-| -------------- | ---------------------------------------- | -------------------------------------------------- |
-| Core goal      | Optimize layouts with structured actions | Learn the *process* of design over multiple phases |
-| Task style     | Short-horizon layout refinement          | Long-horizon planning + instruction following      |
-| Agent behavior | Local edit selection                     | Structure → placement → refinement → polish        |
-| Reward         | Geometry + aesthetic deltas              | Delta-aware, instruction-aware, phase-aware        |
-| Learning       | Environment-ready foundation             | SFT + GRPO training pipeline                       |
-| Evaluation     | Layout quality + validity                | Base vs heuristic vs SFT vs GRPO comparison        |
-
+| Area | DesignGym Round 1 | DesignGym 2.0 |
+|---|---|---|
+| Core goal | Optimize layouts with structured actions | Learn the *process* of design over multiple phases |
+| Task style | Short-horizon layout refinement | Long-horizon planning + instruction following |
+| Agent behavior | Local edit selection | Structure → placement → refinement → polish |
+| Reward | Geometry + aesthetic deltas | Delta-aware, instruction-aware, phase-aware |
+| Learning | Environment-ready foundation | SFT + GRPO training pipeline |
+| Evaluation | Layout quality + validity | Base vs heuristic vs SFT vs GRPO comparison |
 
 Round 1 answered: *Can layout design be a real RL environment?*
 
@@ -97,17 +98,17 @@ Round 2 answers: *Can an LLM learn to act like a designer?*
 
 Each design is a canvas of normalized elements. Every element $b_i$ has geometry:
 
-$$b_i = (x_i, y_i, w_i, h_i), \quad \text{where all values} \in [0,1]$$
+$$b_i = (x_i,\; y_i,\; w_i,\; h_i), \quad \text{where all values} \in [0,1]$$
 
 A layout is:
 
-$$L = b_1, b_2, \dots, b_n$$
+$$L = \{b_1, b_2, \dots, b_n\}$$
 
 The state given to the agent includes: task ID, step count, current score, best score so far, instruction score, phase score, metric vector, weakest metrics, focus elements, action history, full geometry, and current phase. The agent can reason not just about *what* the layout looks like but *where it is* in the design process.
 
 The RL loop:
 
-$$s_t \xrightarrow{a_t} s_{t+1}, r_t$$
+$$s_t \;\xrightarrow{\;a_t\;}\; s_{t+1},\; r_t$$
 
 ### Actions
 
@@ -118,7 +119,6 @@ The action space spans both pixel-level and structural edits — because real de
 **Structural actions:** `apply_template`, `promote`, `reflow_group`, `anchor_to_region`, `finalize`
 
 For example:
-
 - *"Make the title louder"* → `promote`
 - *"Clean up the spacing"* → `distribute` or `reflow_group`
 - *"Move the CTA to the footer"* → `anchor_to_region`
@@ -128,7 +128,7 @@ For example:
 
 The feasible layout space is:
 
-$$\mathcal{F} = L \mid L \text{ satisfies margin, size, ratio, and region constraints}$$
+$$\mathcal{F} = \{L \mid L \text{ satisfies margin, size, ratio, and region constraints}\}$$
 
 Only $L \in \mathcal{F}$ are accepted. Invalid actions are rejected — forcing the agent to learn *legal creativity*.
 
@@ -142,32 +142,23 @@ My research into computational aesthetics — from Birkhoff's 1933 aesthetic mea
 
 ### The Composite Score
 
-$$U(L) = \sum_{k=1}^{K} \lambda_k  g_k(L), \quad g_k(L) \in [0,1], \sum_k \lambda_k = 1$$
+$$U(L) = \sum_{k=1}^{K} \lambda_k \, g_k(L), \quad g_k(L) \in [0,1],\; \sum_k \lambda_k = 1$$
 
 Each $g_k$ is an independent, interpretable aesthetic signal. Together they give a holistic quality score $U(L) \in [0,1]$.
 
 ---
 
-### Overlap — Do elements collide?
+### 1. Overlap — *Do elements collide?*
 
-Overlap is penalized using the total intersection area between layout elements.
+$$g_{\text{overlap}}(L) = \exp\!\left(-\frac{\sum_{i<j} \mathrm{I}(b_i,b_j)}{\sum_i a_i + \epsilon}\right), \quad a_i = w_i h_i$$
 
-# $$
-g_{\text{overlap}}(L)
-
-\exp\left(
--\frac{\sum_{i \lt j} \mathrm{I}(b_i,b_j)}
-{\sum_i a_i + \epsilon}
-\right),
-\qquad
-a_i = w_i h_i
-$$
+Exponential penalty for any intersection. Clean layouts score near 1.
 
 ---
 
 ### 2. Alignment — *Do things line up intentionally?*
 
-$$g_{\text{align}}(L) = \frac{1}{|\mathcal{Q}|} \sum_{q \in \mathcal{Q}} \exp\left(-\frac{d_q}{\tau_{\text{align}}}\right)$$
+$$g_{\text{align}}(L) = \frac{1}{|\mathcal{Q}|} \sum_{q \in \mathcal{Q}} \exp\!\left(-\frac{d_q}{\tau_{\text{align}}}\right)$$
 
 $d_q$ is the distance from element anchors (left, center, right edges) to the nearest alignment guide. Lower distance → higher score.
 
@@ -177,7 +168,7 @@ $d_q$ is the distance from element anchors (left, center, right edges) to the ne
 
 Coefficient of variation on gaps $\Delta$:
 
-$$\mathrm{CV}(\Delta) = \frac{\sigma(\Delta)}{\mu(\Delta) + \epsilon}, \qquad g_{\text{spacing}}(L) = \exp\left(-\frac{\mathrm{CV}(\Delta)}{\tau_{\text{space}}}\right)$$
+$$\mathrm{CV}(\Delta) = \frac{\sigma(\Delta)}{\mu(\Delta) + \epsilon}, \qquad g_{\text{spacing}}(L) = \exp\!\left(-\frac{\mathrm{CV}(\Delta)}{\tau_{\text{space}}}\right)$$
 
 Low variation = consistent rhythm = high score. This captures the difference between *accidental spacing* and *deliberate structure*.
 
@@ -191,7 +182,7 @@ $$c_x = \frac{\sum_i m_i x_i^{(c)}}{\sum_i m_i}, \qquad c_y = \frac{\sum_i m_i y
 
 Balance rewards layouts centered around the canvas midpoint:
 
-$$g_{\text{balance}}(L) = \exp\left(-\frac{\sqrt{(c_x - 0.5)^2 + (c_y - 0.5)^2}}{\tau_{\text{bal}}}\right)$$
+$$g_{\text{balance}}(L) = \exp\!\left(-\frac{\sqrt{(c_x - 0.5)^2 + (c_y - 0.5)^2}}{\tau_{\text{bal}}}\right)$$
 
 Inspired by the **Visual Moment Equilibrium** model — treating layout as a physics problem where visual torques must cancel. This achieves Pearson $r = 0.942$ correlation with human perception benchmarks.
 
@@ -205,7 +196,7 @@ $$\zeta_i = \alpha \log(a_i + \epsilon) - \beta y_i + \gamma f_i + \delta z_i$$
 
 Hierarchy is measured by rank agreement with semantic importance $p_i$ via Spearman correlation:
 
-$$g_{\text{hier}}(L) = \frac{1 + \rho_S(p, \zeta)}{2}$$
+$$g_{\text{hier}}(L) = \frac{1 + \rho_S(p,\, \zeta)}{2}$$
 
 If the biggest element is also the most important, the layout *looks* right because it *is* right.
 
@@ -213,9 +204,9 @@ If the biggest element is also the most important, the layout *looks* right beca
 
 ### 6. Reading Order — *Does the eye flow correctly?*
 
-Given required reading relations $\mathcal{R} = (i,j)$:
+Given required reading relations $\mathcal{R} = \{(i,j)\}$:
 
-$$g_{\text{read}}(L) = \frac{1}{|\mathcal{R}|} \sum_{(i,j)\in\mathcal{R}} \mathbf{1}i \prec j$$
+$$g_{\text{read}}(L) = \frac{1}{|\mathcal{R}|} \sum_{(i,j)\in\mathcal{R}} \mathbf{1}\{i \prec j\}$$
 
 $i \prec j$ means element $i$ appears before $j$ in the intended scan path (F-pattern, Z-pattern, etc.).
 
@@ -225,7 +216,7 @@ $i \prec j$ means element $i$ appears before $j$ in the intended scan path (F-pa
 
 Tasks have semantic placement goals (CTA in lower-right, masthead at top, etc.). Given target region center $r_i$ and element center $c_i$:
 
-$$g_{\text{intent}}(L) = \frac{1}{n} \sum_i \exp\left(-\frac{c_i - r_i}{\tau_{\text{intent}}}\right)$$
+$$g_{\text{intent}}(L) = \frac{1}{n} \sum_i \exp\!\left(-\frac{\|c_i - r_i\|}{\tau_{\text{intent}}}\right)$$
 
 This is the bridge from pure geometry to *design intention* — an element can be perfectly aligned yet still be in the wrong place.
 
@@ -241,15 +232,15 @@ After SFT, nearly every action is valid JSON — so rewarding "valid JSON" gives
 
 Let $S_t$, $I_t$, $P_t$, $B_t$ be layout score, instruction score, phase score, and best-so-far score at step $t$:
 
-$$\Delta S_t = S_t - S_{t-1}, \qquad \Delta I_t = I_t - I_{t-1}, \qquad \Delta B_t = \max(0, B_t - B_{t-1})$$
+$$\Delta S_t = S_t - S_{t-1}, \qquad \Delta I_t = I_t - I_{t-1}, \qquad \Delta B_t = \max(0,\, B_t - B_{t-1})$$
 
 With a clipped scaling function that makes small improvements legible:
 
-$$\phi(\Delta, \tau) = \mathrm{clip}\left(\frac{\Delta}{\tau}, -1, 1\right)$$
+$$\phi(\Delta, \tau) = \mathrm{clip}\!\left(\frac{\Delta}{\tau},\; -1,\; 1\right)$$
 
 The full shaped reward:
 
-$$r_t = \mathrm{clip}\Big(\underbrace{0.03}*{\text{base}} + \underbrace{0.35\phi(\Delta S_t, 0.015)}*{\text{layout quality}} + \underbrace{0.35\phi(\Delta I_t, 0.020)}*{\text{instruction fit}} + \underbrace{0.15\phi(\Delta P_t, 0.025)}*{\text{phase progress}} + \underbrace{0.10\phi(\Delta B_t, 0.015)}*{\text{best score}} + \underbrace{0.05r*{\text{env}}}*{\text{env signal}} + b*{\text{process}} - \pi_t, -1, 1\Big)$$
+$$r_t = \mathrm{clip}\!\Big(\underbrace{0.03}_{\text{base}} + \underbrace{0.35\,\phi(\Delta S_t,\; 0.015)}_{\text{layout quality}} + \underbrace{0.35\,\phi(\Delta I_t,\; 0.020)}_{\text{instruction fit}} + \underbrace{0.15\,\phi(\Delta P_t,\; 0.025)}_{\text{phase progress}} + \underbrace{0.10\,\phi(\Delta B_t,\; 0.015)}_{\text{best score}} + \underbrace{0.05\,r_{\text{env}}}_{\text{env signal}} + b_{\text{process}} - \pi_t,\; -1,\; 1\Big)$$
 
 Where $b_{\text{process}}$ is a phase-aware bonus and $\pi_t$ is a penalty for invalid, useless, or premature actions.
 
@@ -257,16 +248,14 @@ Where $b_{\text{process}}$ is a phase-aware bonus and $\pi_t$ is a penalty for i
 
 The reward checks not just *whether* the layout improved, but *whether the agent chose the right kind of action for the current weakness*:
 
-
-| Weak Metric           | Preferred Actions                     |
-| --------------------- | ------------------------------------- |
-| Overlap / crowding    | `move`, `resize`, `reflow_group`      |
-| Spacing / rhythm      | `distribute`, `align`, `reflow_group` |
-| Hierarchy             | `promote`, `resize`, `apply_template` |
-| Instruction fit       | `anchor_to_region`, `promote`         |
-| Early structure phase | `apply_template`                      |
-| Late polish phase     | `align`, `snap`, `finalize`           |
-
+| Weak Metric | Preferred Actions |
+|---|---|
+| Overlap / crowding | `move`, `resize`, `reflow_group` |
+| Spacing / rhythm | `distribute`, `align`, `reflow_group` |
+| Hierarchy | `promote`, `resize`, `apply_template` |
+| Instruction fit | `anchor_to_region`, `promote` |
+| Early structure phase | `apply_template` |
+| Late polish phase | `align`, `snap`, `finalize` |
 
 This teaches the agent to *diagnose → choose relevantly → improve* — not just make random valid edits.
 
@@ -285,6 +274,9 @@ Otherwise $\pi_{\text{finalize}} > 0$. This enforces long-horizon behavior and p
 ```
 Base Model  →  Heuristic Planner  →  SFT Model  →  GRPO Model
 ```
+
+![Heuristic planner output](assets/Heuristic_Output.png)
+*Figure 2 — The heuristic planner solving an episode end-to-end. It diagnoses the weakest metric, picks a phase-appropriate action, applies it, and re-scores — generating the (state → action) pairs we use as SFT training data. This is how the agent gets a warm start without human labels.*
 
 ### Why SFT First?
 
@@ -306,6 +298,9 @@ Semantically meaningful — but not executable. The environment needs:
 
 Result: `valid_json_rate: 0%` → `valid_json_rate: 100%`. That's not a fine-tune. That's a capability phase transition.
 
+![SFT training metrics](assets/SFT_plot_collage.png)
+*Figure 3 — SFT training evidence on Qwen-0.5B: loss converges cleanly, validity rates jump to 100%, and the action distribution learned by the model mirrors the heuristic teacher. After SFT the model can act in DesignGym; before SFT it cannot.*
+
 ### Why GRPO After?
 
 Once the model can act, GRPO teaches it *which valid action is better*.
@@ -322,19 +317,21 @@ This works because DesignGym has **verifiable rewards** — the environment is t
 
 The learning story:
 
-$$\text{Language Model} \xrightarrow{\text{SFT}} \text{Action Model} \xrightarrow{\text{GRPO}} \text{Design Policy}$$
+$$\text{Language Model} \;\xrightarrow{\;\text{SFT}\;}\; \text{Action Model} \;\xrightarrow{\;\text{GRPO}\;}\; \text{Design Policy}$$
 
 ---
 
 ## 📊 Results: Evidence of Learning
 
+| Policy | Final Score | Instruction Score | Valid JSON | Early Finalize |
+|---|---|---|---|---|
+| **Base** Qwen 0.5B | 0.6948 | 0.5360 | **0%** | 100% |
+| **SFT** Qwen 0.5B | 0.7101 | 0.6263 | 100% | 0% |
+| **SFT @ Best-of-4** | 0.7057 | 0.6672 | 100% | 0% |
+| **GRPO** Qwen 0.5B | 0.6717 | 0.5483 | 98% | 67% |
+| **GRPO @ Best-of-4** ★ | 0.6781 | **0.5817** | **100%** | **17%** |
 
-| Policy             | Final Score | Instruction Score | Valid JSON Rate | Total Reward |
-| ------------------ | ----------- | ----------------- | --------------- | ------------ |
-| **Base** Qwen 0.5B | 0.6944      | 0.5352            | **0%**          | 0.00         |
-| **SFT** Qwen 0.5B  | 0.7181      | 0.5998            | **100%**        | 1.00         |
-| **GRPO** Qwen 0.5B | 0.7190      | 0.5994            | **100%**        | 1.00         |
-
+★ = shipped headline configuration. Base→Final pipeline gain on instruction score: **+8.5%**, on valid JSON: **0% → 100%**, on premature finalizes: **down 83%**.
 
 The most important result is the jump from **0% to 100% valid actions**. That's the model crossing from "knows about design" to "can act in a design environment."
 
@@ -344,11 +341,11 @@ GRPO then learns *which* valid actions are better — a harder problem that cont
 
 ## 🛠️ Tasks Supported
 
-`**poster_basic_v1`** — Headline hierarchy, hero image placement, CTA placement, clean spacing, reading order.
+**`poster_basic_v1`** — Headline hierarchy, hero image placement, CTA placement, clean spacing, reading order.
 
-`**editorial_cover_v1**` — Masthead preservation, headline stack, visual balance, editorial hierarchy.
+**`editorial_cover_v1`** — Masthead preservation, headline stack, visual balance, editorial hierarchy.
 
-`**dense_flyer_v1**` — Crowded layout repair, support group reflow, spacing under density, caption alignment.
+**`dense_flyer_v1`** — Crowded layout repair, support group reflow, spacing under density, caption alignment.
 
 Three very different design problems. A model that improves across all three has learned *general layout reasoning*, not template memorization.
 
@@ -358,7 +355,7 @@ Three very different design problems. A model that improves across all three has
 
 The framework underlying DesignGym isn't about posters. It's about this general structure:
 
-$$U(L) = \lambda_1 g_{\text{efficiency}} + \lambda_2 g_{\text{safety}} + \lambda_3 g_{\text{accessibility}} + \lambda_4 g_{\text{aesthetic}}$$
+$$U(L) = \lambda_1\, g_{\text{efficiency}} + \lambda_2\, g_{\text{safety}} + \lambda_3\, g_{\text{accessibility}} + \lambda_4\, g_{\text{aesthetic}}$$
 
 Swap the metrics. Swap the domain. The agent still learns to optimize arrangement through sequential decision-making.
 
@@ -383,14 +380,23 @@ The same RL loop. A different reward function. **The canvas is always the proble
 ├── client.py                      # OpenEnv client interface
 ├── inference.py                   # Policy inference runner
 ├── models.py                      # Typed action/observation models
+├── notebooks/
+│   ├── grpo_train_colab.ipynb    # GRPO training ← start here
+│   ├── SFT_training_script.ipynb # SFT training
+│   └── evaluate_base_vs_sft_designgym2.ipynb
 ├── training/
 │   ├── grpo_train.py              # GRPO training script
-│   ├── run_grpo.sh                # Smoke test runner
-│   └── grpo_train_colab.ipynb    # Full training notebook ← start here
+│   ├── generate_sft_data.py       # SFT data generation
+│   └── run_grpo.sh                # Smoke test runner
 ├── server/
 │   ├── app.py                     # FastAPI wrapper
 │   ├── DesignGym_environment.py   # Core environment logic
+│   ├── rewards.py                 # Reward functions
+│   ├── phases.py                  # Phase-aware logic
 │   └── requirements.txt
+├── data/sft/                      # SFT train/eval data
+├── assets/                        # Plots and diagrams
+├── web/                           # Demo web UI
 ├── Dockerfile
 ├── pyproject.toml
 ├── openenv.yaml                   # OpenEnv manifest
@@ -408,7 +414,6 @@ DesignGym is fully OpenEnv-compatible: `reset()`, `step(action)`, typed models, 
 ## 🚀 Running It
 
 **Install:**
-
 ```bash
 pip install -e .
 openenv validate
@@ -416,14 +421,12 @@ python server/app.py
 ```
 
 **Docker:**
-
 ```bash
 docker build -t designgym-env .
 docker run --rm -p 8000:8000 designgym-env
 ```
 
 **Inference:**
-
 ```bash
 HF_TOKEN=your_token \
 API_BASE_URL=https://router.huggingface.co/v1 \
@@ -455,10 +458,10 @@ The final vision: models that don't just generate designs — but **learn how to
 
 > A good designer does not just produce a layout.  
 > A good designer repeatedly diagnoses, edits, compares, and improves.  
->
+>  
 > **DesignGym 2.0 teaches that process to a machine.**
 
 ---
 
 *Built for the OpenEnv Hackathon · India 2026*  
-*Math rendered with [KaTeX](https://katex.org/) / [MathJax*](https://www.mathjax.org/)
+*Math rendered with [KaTeX](https://katex.org/) / [MathJax](https://www.mathjax.org/)*
