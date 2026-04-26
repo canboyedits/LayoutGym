@@ -10,6 +10,7 @@ base_path: /web
 tags:
   - openenv
 ---
+
 # 🎨 DesignGym 2.0 — Teaching an LLM to Think Like a Designer
 
 > *What if a machine didn't just generate a layout — but learned how to improve one?*
@@ -28,19 +29,8 @@ Not a one-shot generator. Not a template-picker. An *agent* that looks at a layo
 
 That's what this project is. And it's bigger than posters.
 
----
-
-## 🔗 Project Links
-
-| Resource | Link |
-|---|---|
-| 🌍 **Environment (HF Space)** | [DesignGym Environment Server](https://huggingface.co/spaces/yashvyasop/DesignGym) |
-| 💻 **GitHub Repo** | [canboyedits/DesignGym](https://github.com/canboyedits/DesignGym) |
-| 🧠 **SFT Trained Adapter** | [designgym2-sft-qwen05-lora](https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora) |
-| 📓 **GRPO Training Notebook** | [grpo_train_colab.ipynb](https://colab.research.google.com/drive/1jw1waO-bc0Mk3U7-RBbomsIGFBWvA0aW?usp=sharing) |
-| 📓 **SFT Training Notebook** | [SFT_training_script.ipynb](https://colab.research.google.com/drive/1ZtjQSen19Sdmx8FOXvM-nb_AFDSNM_1C?usp=sharing) |
-| 📓 **Evaluation Notebook** | [evaluate_base_vs_sft.ipynb](https://colab.research.google.com/drive/1U1t9GVkc8sk2BeYCxoDnlHV1WMjYCpv1?usp=sharing) |
-| 📊 **Training Logs** | [HF Training Job](https://huggingface.co/jobs/yashvyasop/69ed7b02d70108f37acdf597) |
+![DesignGym architecture](assets/Architectural_Diagram.png)
+*Figure 1 — End-to-end architecture: the OpenEnv-compliant DesignGym environment, the heuristic planner that bootstraps SFT data, the SFT adapter that locks in the action interface, and the GRPO trainer that learns design preference from verifiable reward.*
 
 ---
 
@@ -65,6 +55,20 @@ The abstract structure is always the same:
 $$\text{objects} + \text{constraints} + \text{goals} \rightarrow \text{optimized arrangement}$$
 
 DesignGym proves this framework works for graphic design. The architecture is a foundation for **any domain where arrangement matters**.
+
+---
+
+## 🔗 Project Links
+
+| Resource | Link |
+|---|---|
+| 🌍 **Environment (HF Space)** | [DesignGym Environment Server](https://huggingface.co/spaces/yashvyasop/DesignGym) |
+| 💻 **GitHub Repo** | [canboyedits/DesignGym](https://github.com/canboyedits/DesignGym) |
+| 🧠 **SFT Trained Adapter** | [designgym2-sft-qwen05-lora](https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora) |
+| 📓 **GRPO Training Notebook** | [grpo_train_colab.ipynb](https://colab.research.google.com/drive/1jw1waO-bc0Mk3U7-RBbomsIGFBWvA0aW?usp=sharing) |
+| 📓 **SFT Training Notebook** | [SFT_training_script.ipynb](https://colab.research.google.com/drive/1ZtjQSen19Sdmx8FOXvM-nb_AFDSNM_1C?usp=sharing) |
+| 📓 **Evaluation Notebook** | [evaluate_base_vs_sft.ipynb](https://colab.research.google.com/drive/1U1t9GVkc8sk2BeYCxoDnlHV1WMjYCpv1?usp=sharing) |
+| 📊 **Training Logs** | [HF Training Job](https://huggingface.co/jobs/yashvyasop/69ed7b02d70108f37acdf597) |
 
 ---
 
@@ -284,6 +288,9 @@ Otherwise $\pi_{\text{finalize}} > 0$. This enforces long-horizon behavior and p
 Base Model  →  Heuristic Planner  →  SFT Model  →  GRPO Model
 ```
 
+![Heuristic planner output](assets/Heuristic_Output.png)
+*Figure 2 — The heuristic planner solving an episode end-to-end. It diagnoses the weakest metric, picks a phase-appropriate action, applies it, and re-scores — generating the (state → action) pairs we use as SFT training data. This is how the agent gets a warm start without human labels.*
+
 ### Why SFT First?
 
 The base model (Qwen 0.5B) understands design language but cannot speak the *environment's action format*. It says things like:
@@ -303,6 +310,9 @@ Semantically meaningful — but not executable. The environment needs:
 **SFT teaches the model the interface.** The goal is not creativity — it's action correctness.
 
 Result: `valid_json_rate: 0%` → `valid_json_rate: 100%`. That's not a fine-tune. That's a capability phase transition.
+
+![SFT training metrics](assets/SFT_plot_collage.png)
+*Figure 3 — SFT training evidence on Qwen-0.5B: loss converges cleanly, validity rates jump to 100%, and the action distribution learned by the model mirrors the heuristic teacher. After SFT the model can act in DesignGym; before SFT it cannot.*
 
 ### Why GRPO After?
 
@@ -326,15 +336,21 @@ $$\text{Language Model} \;\xrightarrow{\;\text{SFT}\;}\; \text{Action Model} \;\
 
 ## 📊 Results: Evidence of Learning
 
-| Policy | Final Score | Instruction Score | Valid JSON Rate | Total Reward |
+| Policy | Final Score | Instruction Score | Valid JSON | Early Finalize |
 |---|---|---|---|---|
-| **Base** Qwen 0.5B | 0.6944 | 0.5352 | **0%** | 0.00 |
-| **SFT** Qwen 0.5B | 0.7181 | 0.5998 | **100%** | 1.00 |
-| **GRPO** Qwen 0.5B | 0.7190 | 0.5994 | **100%** | 1.00 |
+| **Base** Qwen 0.5B | 0.6948 | 0.5360 | **0%** | 100% |
+| **SFT** Qwen 0.5B | 0.7101 | 0.6263 | 100% | 0% |
+| **SFT @ Best-of-4** | 0.7057 | 0.6672 | 100% | 0% |
+| **GRPO** Qwen 0.5B | 0.6717 | 0.5483 | 98% | 67% |
+| **GRPO @ Best-of-4** ★ | 0.6781 | **0.5817** | **100%** | **17%** |
+
+★ = shipped headline configuration. Base→Final pipeline gain on instruction score: **+8.5%**, on valid JSON: **0% → 100%**, on premature finalizes: **down 83%**.
 
 The most important result is the jump from **0% to 100% valid actions**. That's the model crossing from "knows about design" to "can act in a design environment."
 
 GRPO then learns *which* valid actions are better — a harder problem that continues to improve with more training. The infrastructure and reward signal are proven.
+
+![Finetuned output](assets/FT_Output.png)
 
 ---
 
@@ -464,3 +480,4 @@ The final vision: models that don't just generate designs — but **learn how to
 
 *Built for the OpenEnv Hackathon · India 2026*  
 *Math rendered with [KaTeX](https://katex.org/) / [MathJax](https://www.mathjax.org/)*
+

@@ -1,39 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>DesignGym 2.0 Demo</title>
-<link rel="stylesheet" href="/web/style.css?v=5" />
+  <title>DesignGym 2.0 — Live Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/web/style.css?v=10" />
 </head>
 <body>
-  <main>
-    <section class="panel">
-      <h1>DesignGym 2.0</h1>
-      <p>Long-horizon instruction-following layout design environment.</p>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🎨</span>
+      <div>
+        <h1>DesignGym 2.0</h1>
+        <p class="tag">Watch the agent design — heuristic vs fine-tuned LLM</p>
+      </div>
+    </div>
+  </header>
 
-      <label>Task</label>
-      <select id="task">
-        <option value="poster_basic_v1">poster_basic_v1</option>
-        <option value="editorial_cover_v1">editorial_cover_v1</option>
-        <option value="dense_flyer_v1">dense_flyer_v1</option>
+  <main>
+    <section class="control-panel">
+      <h2>1. Pick a task</h2>
+      <select id="task" class="big-select">
+        <option value="poster_basic_v1">poster_basic_v1 — easy</option>
+        <option value="editorial_cover_v1">editorial_cover_v1 — medium</option>
+        <option value="dense_flyer_v1">dense_flyer_v1 — hard</option>
       </select>
 
-      <div class="buttons">
-        <button id="reset">Reset</button>
-        <button id="step">Heuristic Step</button>
-        <button id="finalize">Finalize</button>
+      <h2>2. Choose a policy</h2>
+      <div class="policy-pick">
+        <label class="policy-card" data-policy="heuristic">
+          <input type="radio" name="policy" value="heuristic" checked />
+          <div>
+            <strong>Heuristic Planner</strong>
+            <span>Rule-based, instant, no API key.</span>
+          </div>
+        </label>
+        <label class="policy-card" data-policy="sft" id="policy-sft">
+          <input type="radio" name="policy" value="sft" />
+          <div>
+            <strong>SFT-LLM Picker</strong>
+            <span>Fine-tuned Qwen-0.5B chooses among candidate actions.</span>
+          </div>
+        </label>
       </div>
 
-      <pre id="brief"></pre>
-      <pre id="metrics"></pre>
+      <h2>3. Run</h2>
+      <div class="actions">
+        <button id="run" class="primary">▶ Run Episode</button>
+        <button id="reset" class="ghost">Reset</button>
+        <button id="step" class="ghost">Step Once</button>
+      </div>
+
+      <div id="status" class="status muted">Idle. Pick a task and click Run.</div>
+
+      <button id="scroll-details" class="scroll-pointer" type="button" aria-label="Scroll to episode details">
+        <span class="scroll-pointer-text">Scroll for details</span>
+        <span class="scroll-pointer-arrow" aria-hidden="true">↓</span>
+      </button>
     </section>
 
     <section class="canvas-panel">
-      <svg id="canvas" viewBox="0 0 800 1000"></svg>
-      <pre id="history"></pre>
+      <div class="canvas-wrap">
+        <svg id="canvas" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+
+      <div class="scoreboard">
+        <div class="score-card primary-score">
+          <span class="label">Final Score</span>
+          <strong id="score-final">—</strong>
+        </div>
+        <div class="score-card">
+          <span class="label">Instruction</span>
+          <strong id="score-instr">—</strong>
+        </div>
+        <div class="score-card">
+          <span class="label">Steps</span>
+          <strong id="score-steps">—</strong>
+        </div>
+        <div class="score-card">
+          <span class="label">Total Reward</span>
+          <strong id="score-reward">—</strong>
+        </div>
+        <div class="score-card">
+          <span class="label">Valid Actions</span>
+          <strong id="score-valid">—</strong>
+        </div>
+      </div>
     </section>
   </main>
 
-<script src="/web/app.js?v=5"></script>
+  <section class="log-panel">
+    <details open>
+      <summary><strong>📜 Episode Log</strong> <span id="log-count" class="muted">— no steps yet</span></summary>
+      <table id="log-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Action</th>
+            <th>Reward</th>
+            <th>Δ Score</th>
+            <th>Score</th>
+            <th>Worst metric</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </details>
+
+    <details open>
+      <summary><strong>🔍 Inspect (raw JSON)</strong></summary>
+      <pre id="raw-summary" class="raw"></pre>
+    </details>
+  </section>
+
+  <footer>
+    <a href="https://github.com/canboyedits/DesignGym" target="_blank">GitHub</a>
+    ·
+    <a href="https://huggingface.co/spaces/yashvyasop/DesignGym" target="_blank">Hugging Face Space</a>
+    ·
+    <a href="/info" target="_blank">env info</a>
+    ·
+    <a href="/tasks" target="_blank">tasks</a>
+  </footer>
+
+  <script src="/web/app.js?v=10"></script>
 </body>
 </html>

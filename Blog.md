@@ -337,6 +337,8 @@ The most important result is the jump from **0% to 100% valid actions**. That's 
 
 GRPO then learns *which* valid actions are better — a harder problem that continues to improve with more training. The infrastructure and reward signal are proven.
 
+![Finetuned output](assets/FT_Output.png)
+
 ---
 
 ## 🛠️ Tasks Supported

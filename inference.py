@@ -9,11 +9,29 @@ from typing import List, Optional, Sequence
 
 from openai import OpenAI
 
+# DesignGymEnv is only required for the standalone CLI runner (run_task / main).
+# Importing it at module load chains in openenv.core, which the server-side
+# embedding does not need. Defer it behind a lazy helper so importing this
+# module from server/app.py works even when the openenv client isn't reachable.
 try:
-    from DesignGym import DesignGymAction, DesignGymEnv
-except Exception:
     from models import DesignGymAction
-    from client import DesignGymEnv
+except Exception:
+    from DesignGym import DesignGymAction  # type: ignore
+
+DesignGymEnv = None  # populated lazily by _load_env_client()
+
+
+def _load_env_client():
+    """Import DesignGymEnv on demand. Used only by the CLI runner."""
+    global DesignGymEnv
+    if DesignGymEnv is not None:
+        return DesignGymEnv
+    try:
+        from DesignGym import DesignGymEnv as _Env  # type: ignore
+    except Exception:
+        from client import DesignGymEnv as _Env
+    DesignGymEnv = _Env
+    return DesignGymEnv
 
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -508,7 +526,8 @@ def get_model_action_sync(
 
 
 async def run_task(client: Optional[OpenAI], task_name: str) -> None:
-    env = await DesignGymEnv.from_docker_image(LOCAL_IMAGE_NAME) if LOCAL_IMAGE_NAME else DesignGymEnv(base_url=BASE_URL)
+    EnvCls = _load_env_client()
+    env = await EnvCls.from_docker_image(LOCAL_IMAGE_NAME) if LOCAL_IMAGE_NAME else EnvCls(base_url=BASE_URL)
 
     rewards: List[float] = []
     history: List[str] = []
