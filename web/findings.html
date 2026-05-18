@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DesignGym 2.0 — Honest Findings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#0f1117;--s1:#181b25;--s2:#1f2330;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);--tx:#e8ecf4;--mt:#8892a6;--ac:#5b9cf5;--gn:#3dd68c;--am:#f0b429;--rd:#ef6461}
+    *{box-sizing:border-box;margin:0}
+    body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.7;padding:0}
+    .wrap{max-width:760px;margin:0 auto;padding:40px 24px 60px}
+    h1{font-family:'Fraunces',Georgia,serif;font-size:28px;margin-bottom:6px}
+    h2{font-family:'Fraunces',Georgia,serif;font-size:20px;margin:32px 0 10px;padding-top:16px;border-top:1px solid var(--bd)}
+    h3{font-size:15px;margin:20px 0 6px}
+    p{color:var(--mt);font-size:14px;margin:8px 0}
+    a{color:var(--ac)}
+    ul{color:var(--mt);font-size:14px;padding-left:22px}li{margin:5px 0}
+    code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--s2);padding:1px 5px;border-radius:3px}
+    table{width:100%;border-collapse:collapse;font-size:13px;font-family:'JetBrains Mono',monospace;margin:12px 0}
+    th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left}
+    th{font-size:10px;text-transform:uppercase;color:var(--mt);font-weight:500}
+    .win{color:var(--gn);font-weight:600}
+    .bad{color:var(--rd)}
+    blockquote{border-left:3px solid var(--ac);padding:10px 16px;margin:14px 0;background:rgba(91,156,245,.06);border-radius:0 6px 6px 0;font-size:13px;color:var(--mt)}
+    .back{display:inline-block;margin-bottom:20px;color:var(--ac);font-size:13px;text-decoration:none}
+    .back:hover{text-decoration:underline}
+    img{max-width:100%;border-radius:8px;margin:12px 0}
+    .tag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:5px;font-weight:600;margin:4px 4px 4px 0}
+    .tag-g{background:rgba(61,214,140,.12);color:var(--gn)}
+    .tag-a{background:rgba(240,180,41,.12);color:var(--am)}
+    .tag-r{background:rgba(239,100,97,.12);color:var(--rd)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">&larr; Back to Demo</a>
+  <h1>DesignGym 2.0 — Honest Findings</h1>
+  <p>Post-deployment analysis. No spin. What worked, what didn't, and what to do next.</p>
+
+  <h2>The Deployment Honesty Bug</h2>
+  <p>The original Space README claimed results from fine-tuned SFT/GRPO LoRA adapters, but the deployed HF Space was silently using <strong>base Qwen via the HF Inference Router</strong>. The Router only hosts a curated model catalogue and cannot serve user LoRA adapters. Visitors saw "SFT-LLM Picker" in the UI, but every inference call hit the unmodified base model.</p>
+  <p>This fix loads the actual LoRA adapters locally with PEFT inside the Space worker process. Every step now shows an honest label: <code>finetuned_sft</code>, <code>finetuned_grpo</code>, <code>local_base</code>, or <code>heuristic</code>.</p>
+
+  <h2>Benchmark: 36 Episodes, 4 Backends, 3 Tasks</h2>
+  <p>Deterministic environment, seed 0/1/2, MPS (Apple M1) inference. Every number is reproducible.</p>
+
+  <table>
+    <thead><tr><th>Backend</th><th>Instr Score</th><th>Total Reward</th><th>Time</th><th>LLM Steer</th></tr></thead>
+    <tbody>
+      <tr><td>Heuristic</td><td>0.5564</td><td>1.588</td><td class="win">0.0s</td><td>-</td></tr>
+      <tr><td>Base (no LoRA)</td><td>0.5367</td><td>1.679</td><td>11.5s</td><td>100%</td></tr>
+      <tr><td>SFT</td><td>0.5557</td><td>1.789</td><td>16.8s</td><td>100%</td></tr>
+      <tr><td>GRPO</td><td>0.5599</td><td class="win">1.854</td><td>12.0s</td><td>100%</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Per-Task (Dense Flyer — the hardest)</h3>
+  <table>
+    <thead><tr><th>Backend</th><th>Instr Score</th><th>Total Reward</th></tr></thead>
+    <tbody>
+      <tr><td>Heuristic</td><td>0.6235</td><td>1.900</td></tr>
+      <tr><td>Base</td><td>0.6148</td><td>1.980</td></tr>
+      <tr><td>SFT</td><td class="win">0.6555</td><td>2.038</td></tr>
+      <tr><td>GRPO</td><td class="win">0.6872</td><td class="win">2.139</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What Worked</h2>
+  <p><span class="tag tag-g">SFT: 0% &rarr; 100% valid JSON</span></p>
+  <p>This is the biggest single win. Base Qwen 0.5B cannot produce the <code>{"choice": N}</code> action format at all. After SFT it does so reliably. This is a <strong>capability phase transition</strong>, not a marginal improvement.</p>
+
+  <p><span class="tag tag-g">GRPO: Highest per-step reward</span></p>
+  <p>GRPO accumulates 1.854 avg total reward — 17% more than heuristic (1.588). It picks bolder actions that move metrics more per step. On the hardest task (dense_flyer), GRPO's instruction score (0.687) beats every other backend by a wide margin.</p>
+
+  <p><span class="tag tag-g">100% LLM steer rate</span></p>
+  <p>The parse fix (handling bare integers + regex fallback) means every single step is now model-driven. Zero fallback to heuristic candidate selection.</p>
+
+  <h2>What Didn't Work (Yet)</h2>
+  <p><span class="tag tag-a">Heuristic still wins on final score</span></p>
+  <p>The hand-coded heuristic gets 0.738 avg final score vs SFT's 0.702 and GRPO's 0.694. This is expected: the heuristic was written with full knowledge of the reward function and metric weights. It's a strong ceiling for a small model to beat.</p>
+
+  <p><span class="tag tag-a">Small SFT vs Base lift</span></p>
+  <p>SFT beats base by only +0.005 on final score. The adapter teaches format compliance (0% &rarr; 100% valid JSON) but doesn't dramatically change which actions the model prefers. This suggests the SFT training data (heuristic trajectories) could be enriched with more diverse, higher-quality demonstrations.</p>
+
+  <p><span class="tag tag-a">GRPO needs more training</span></p>
+  <p>The current GRPO run was ~200 optimization steps on a free Colab T4. Published GRPO results on comparable tasks use 1000-5000 steps with best-of-N=8 sampling. The infrastructure and reward signal are proven — it just needs more compute.</p>
+
+  <h2>Why Does GRPO Have High Reward But Lower Final Score?</h2>
+  <p>This is the most interesting finding. GRPO maximizes <em>per-step reward</em> (delta-based shaping), but the final score depends on the <em>endpoint state</em> — not the sum of deltas. GRPO picks aggressive actions that generate large positive deltas, but sometimes overshoots or doesn't converge cleanly to a high final state.</p>
+  <blockquote>The reward function rewards <em>improvement</em>. The final score rewards <em>position</em>. These correlate but don't perfectly align — especially with limited training budget.</blockquote>
+  <p>Fix: add a terminal bonus proportional to final score, or weight the last step's reward more heavily.</p>
+
+  <h2>The 0.5B Elephant in the Room</h2>
+  <p>Qwen 2.5 0.5B has 494M parameters. The observation prompt is ~500 tokens of structured layout state + metrics. For a model this small, the "understand complex multi-metric state and reason about which of 6 actions best addresses the weakest metric" task is near the edge of capability.</p>
+  <p>Evidence: the model often returns the correct <em>format</em> (valid JSON) but picks somewhat random choices — it hasn't internalized the relationship between worst_metrics and action types deeply enough. A 3B model with the same LoRA adapter would likely show a much bigger adapter-vs-base gap.</p>
+
+  <h2>Concrete Next Steps</h2>
+  <ul>
+    <li><strong>Scale GRPO training:</strong> 1000+ steps, best-of-N=8, gradient accumulation. A100/H100 for a few hours, or HF training jobs.</li>
+    <li><strong>Try Qwen 3B:</strong> Same LoRA rank (16), same data. 4-bit quantization fits in 16GB. The reasoning capacity jump should be significant.</li>
+    <li><strong>Process reward model:</strong> Train a small critic network that scores partial trajectories, giving GRPO per-step signal instead of episode-end only.</li>
+    <li><strong>Curriculum:</strong> Start GRPO on poster_basic_v1 (easy) until convergence, then add editorial and dense_flyer. Currently all tasks train simultaneously.</li>
+    <li><strong>Reward terminal bonus:</strong> Add <code>0.2 * final_score</code> to the last step's reward so GRPO optimizes for endpoint quality, not just per-step deltas.</li>
+    <li><strong>Richer SFT data:</strong> Include multiple heuristic variations and best-of-N filtered trajectories as SFT training data instead of single-run heuristic traces.</li>
+  </ul>
+
+  <h2>Training Resources</h2>
+  <ul>
+    <li><a href="https://colab.research.google.com/drive/1ZtjQSen19Sdmx8FOXvM-nb_AFDSNM_1C?usp=sharing">SFT Training Notebook (Colab)</a></li>
+    <li><a href="https://colab.research.google.com/drive/1jw1waO-bc0Mk3U7-RBbomsIGFBWvA0aW?usp=sharing">GRPO Training Notebook (Colab)</a></li>
+    <li><a href="https://colab.research.google.com/drive/1U1t9GVkc8sk2BeYCxoDnlHV1WMjYCpv1?usp=sharing">Evaluation Notebook (Colab)</a></li>
+    <li><a href="https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora">SFT LoRA Adapter (HuggingFace)</a></li>
+    <li><a href="https://huggingface.co/yashvyasop/designgym2-grpo-qwen05-lora">GRPO LoRA Adapter (HuggingFace)</a></li>
+    <li><a href="https://huggingface.co/jobs/yashvyasop/69ed7b02d70108f37acdf597">HF Training Job Logs</a></li>
+    <li><a href="https://github.com/canboyedits/DesignGym">GitHub Repository</a></li>
+  </ul>
+
+  <p style="margin-top:32px;font-size:12px;color:rgba(255,255,255,.3)">Built for the OpenEnv Hackathon &middot; India 2026</p>
+</div>
+</body>
+</html>

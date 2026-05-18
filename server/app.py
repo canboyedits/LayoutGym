@@ -58,17 +58,26 @@ _LLM_CLIENT_CACHE: Dict[str, Any] = {"client": None, "key": None}
 
 
 def _get_llm_client():
-    if not (_INFERENCE_OK and _OPENAI_OK):
-        return None
-    token = os.getenv("HF_TOKEN") or getattr(INF, "HF_TOKEN", None)
-    base = os.getenv("API_BASE_URL", getattr(INF, "API_BASE_URL", "https://router.huggingface.co/v1"))
-    if not token:
-        return None
-    cache_key = f"{token[:6]}::{base}"
-    if _LLM_CLIENT_CACHE["key"] != cache_key:
-        _LLM_CLIENT_CACHE["client"] = OpenAI(base_url=base, api_key=token)
-        _LLM_CLIENT_CACHE["key"] = cache_key
-    return _LLM_CLIENT_CACHE["client"]
+    backend = os.getenv("DESIGNGYM_BACKEND", "local")
+    if backend == "local":
+        try:
+            from local_model import get_client
+            return get_client()
+        except Exception:
+            return None
+    if backend == "router":
+        if not (_INFERENCE_OK and _OPENAI_OK):
+            return None
+        token = os.getenv("HF_TOKEN") or getattr(INF, "HF_TOKEN", None)
+        base = os.getenv("API_BASE_URL", getattr(INF, "API_BASE_URL", "https://router.huggingface.co/v1"))
+        if not token:
+            return None
+        cache_key = f"router::{token[:6]}::{base}"
+        if _LLM_CLIENT_CACHE["key"] != cache_key:
+            _LLM_CLIENT_CACHE["client"] = OpenAI(base_url=base, api_key=token)
+            _LLM_CLIENT_CACHE["key"] = cache_key
+        return _LLM_CLIENT_CACHE["client"]
+    return None
 
 
 app = create_fastapi_app(
@@ -76,6 +85,14 @@ app = create_fastapi_app(
     DesignGymAction,
     DesignGymObservation,
 )
+
+if os.getenv("DESIGNGYM_BACKEND", "local") == "local":
+    try:
+        from local_model import warm_up_async
+        warm_up_async()
+        print("[server] local model warm-up thread started", flush=True)
+    except Exception as _warmup_err:
+        print(f"[server] local model warm-up skipped: {_warmup_err}", flush=True)
 
 DEMO_ENV = DesignGymEnvironment()
 _LAST_OBS: Dict[str, Any] = {"obs": None}
@@ -186,6 +203,47 @@ def info():
 def demo_ping():
     return {"ok": True, "message": "DesignGym 2.0 demo endpoints are live"}
 
+
+@app.get("/demo/backend_info")
+def demo_backend_info():
+    try:
+        from local_model import describe_client, ADAPTERS as _ADAPTERS, BASE_MODEL as _BASE
+        client = _get_llm_client()
+        info = describe_client(client)
+        info["available_adapters"] = _ADAPTERS
+        info["base_model"] = _BASE
+        info["env"] = {
+            "DESIGNGYM_BACKEND": os.getenv("DESIGNGYM_BACKEND", "local"),
+            "DESIGNGYM_ADAPTER": os.getenv("DESIGNGYM_ADAPTER", "sft"),
+            "HF_TOKEN_present": bool(os.getenv("HF_TOKEN")),
+        }
+        return info
+    except Exception as e:
+        return {"backend": "unknown", "error": str(e)}
+
+
+@app.post("/demo/switch_adapter")
+async def demo_switch_adapter(request: Request):
+    """Switch the active LoRA adapter. Triggers a fresh model load -- first call after switch will be slow."""
+    try:
+        from local_model import get_client, ADAPTERS as _ADAPTERS
+    except ImportError:
+        return JSONResponse(status_code=400, content={"error": "local_model not available"})
+
+    payload = await request.json()
+    key = payload.get("adapter")
+    if key not in _ADAPTERS:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Unknown adapter {key!r}", "valid": list(_ADAPTERS)},
+        )
+    client = get_client(key)
+    _LLM_CLIENT_CACHE["client"] = None
+    _LLM_CLIENT_CACHE["key"] = None
+    client._ensure_loaded()
+    return {"ok": True, "adapter": key, "info": client.describe()}
+
+
 @app.get("/tasks")
 def tasks():
     return JSONResponse(
@@ -272,7 +330,6 @@ def _record_step(step: int, action, obs, prev_score: float) -> Dict[str, Any]:
 def _choose_action(policy: str, step: int, obs, history: List[str], rewards: List[float], recent_actions: List[str]):
     """Pick one action using the requested policy. Falls back to heuristic if LLM unavailable."""
     if not _INFERENCE_OK:
-        # Hard fallback: just finalize if we can't import inference.py
         return DesignGymAction(action_type="finalize"), "fallback_no_inference"
 
     if policy == "heuristic":
@@ -280,12 +337,25 @@ def _choose_action(policy: str, step: int, obs, history: List[str], rewards: Lis
 
     client = _get_llm_client()
     if client is None:
-        # SFT/LLM requested but no HF_TOKEN -> degrade gracefully to local-best candidate
         action = INF.get_model_action_sync(None, step, obs, history, rewards, recent_actions)
-        return action, "llm_fallback_local_best"
+        return action, "heuristic_fallback"
 
     action = INF.get_model_action_sync(client, step, obs, history, rewards, recent_actions)
-    label = "sft_llm" if policy == "sft" else f"llm_{policy}"
+
+    try:
+        from local_model import LocalLoRAClient
+        if isinstance(client, LocalLoRAClient):
+            if client.adapter_id:
+                label = f"finetuned_{client.adapter_key}"
+            else:
+                label = "local_base"
+        elif hasattr(client, "base_url"):
+            label = "router_base"
+        else:
+            label = "llm"
+    except ImportError:
+        label = "router_base" if hasattr(client, "base_url") else "llm"
+
     return action, label
 
 
@@ -395,7 +465,27 @@ async def demo_run_episode(request: Request):
 @app.get("/demo/policies")
 def demo_policies():
     """Tell the frontend which policies are usable right now."""
-    llm_ok = _get_llm_client() is not None
+    client = _get_llm_client()
+    llm_ok = client is not None
+
+    try:
+        from local_model import describe_client, LocalLoRAClient
+        info = describe_client(client)
+        backend = info.get("backend", "none")
+        adapter_key = info.get("adapter_key", "")
+    except ImportError:
+        backend = "router" if llm_ok else "none"
+        adapter_key = ""
+
+    if backend == "local-lora":
+        llm_label = f"Fine-tuned {(adapter_key or '').upper()} · Qwen2.5-0.5B + LoRA (local CPU)"
+    elif backend == "local-base":
+        llm_label = "Base Qwen2.5-0.5B (local CPU, no adapter)"
+    elif backend == "router":
+        llm_label = "Base Qwen2.5-0.5B (HF Router) — NOT fine-tuned"
+    else:
+        llm_label = "Heuristic only — no LLM available"
+
     return {
         "policies": [
             {
@@ -405,17 +495,16 @@ def demo_policies():
                 "description": "Rule-based planner from inference.py — fast, no API key needed.",
             },
             {
-                "id": "sft",
-                "label": "SFT-LLM Picker" if llm_ok else "SFT-LLM Picker (offline → falls back to local best)",
-                "available": _INFERENCE_OK,
-                "description": (
-                    f"Calls Hugging Face Inference Providers ({getattr(INF, 'MODEL_NAME', 'Qwen/Qwen2.5-0.5B-Instruct')}) "
-                    "to pick from candidate actions. Requires HF_TOKEN."
-                ),
+                "id": "llm",
+                "label": llm_label,
+                "available": _INFERENCE_OK and llm_ok,
+                "description": f"Backend: {backend}. Uses the LLM client to pick from candidate actions.",
                 "llm_active": llm_ok,
+                "backend": backend,
             },
         ],
         "llm_active": llm_ok,
+        "backend": backend,
         "model_name": getattr(INF, "MODEL_NAME", None) if _INFERENCE_OK else None,
     }
 

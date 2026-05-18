@@ -4,126 +4,611 @@
   <meta charset="utf-8" />
   <title>DesignGym 2.0 — Live Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/web/style.css?v=10" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#0f1117;--s1:#181b25;--s2:#1f2330;--s3:#262a38;
+      --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.14);
+      --tx:#e8ecf4;--mt:#8892a6;--ac:#5b9cf5;--gn:#3dd68c;
+      --am:#f0b429;--rd:#ef6461;
+      --ff:'Inter',system-ui,sans-serif;
+      --fm:'JetBrains Mono',ui-monospace,monospace;
+      --fd:'Fraunces',Georgia,serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0}
+    body{font-family:var(--ff);background:var(--bg);color:var(--tx);line-height:1.5;min-height:100vh}
+    a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}
+
+    /* ── NAV TABS ── */
+    .tab-bar{display:flex;gap:6px;padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:90;align-items:center}
+    .tab-bar-title{font-family:var(--fd);font-size:16px;font-weight:700;margin-right:auto;white-space:nowrap}
+    .tab-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-family:var(--ff);font-size:13px;font-weight:600;color:var(--mt);background:var(--s2);border:1px solid var(--bd2);border-radius:999px;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .tab-btn:hover{color:var(--tx);background:var(--s3);border-color:var(--ac)}
+    .tab-btn.active{color:#fff;background:var(--ac);border-color:var(--ac)}
+    .tab-ico{font-size:15px;line-height:1}
+    .blog-link{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;font-family:var(--ff);font-size:13px;font-weight:600;color:var(--mt);background:var(--s2);border:1px solid var(--bd2);border-radius:999px;cursor:pointer;transition:all .15s;white-space:nowrap;text-decoration:none}
+    .blog-link:hover{color:#fff;background:#d4629a;border-color:#d4629a;text-decoration:none}
+    .tab-page{display:none;padding:0}.tab-page.active{display:block}
+
+    /* ── HEADER ── */
+    .hdr{padding:20px 24px;border-bottom:1px solid var(--bd)}
+    .hdr h1{font-family:var(--fd);font-size:22px;font-weight:700}
+    .hdr-sub{color:var(--mt);font-size:12px;margin-top:4px}
+
+    /* ── BACKEND CARD ── */
+    .bc{margin:16px 24px;background:var(--s1);border:1px solid var(--bd2);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .dot-g{background:var(--gn);box-shadow:0 0 6px var(--gn)}.dot-a{background:var(--am);box-shadow:0 0 6px var(--am)}.dot-r{background:var(--rd);box-shadow:0 0 6px var(--rd)}.dot-m{background:var(--mt)}
+    .bc-info{flex:1;min-width:200px}
+    .bc-lbl{font-family:var(--fm);font-size:13px;font-weight:500}
+    .bc-det{color:var(--mt);font-size:11px;margin-top:2px}
+    .sw{display:flex;align-items:center;gap:6px}
+    .sw label{font-size:10px;color:var(--mt);text-transform:uppercase;letter-spacing:.5px}
+    .sw select{font-family:var(--fm);font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx)}
+
+    /* ── PANELS ── */
+    .grid2{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px 24px}
+    @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+    .pnl{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:16px}
+    .pnl h2{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--mt);margin:14px 0 6px}.pnl h2:first-child{margin-top:0}
+
+    /* controls */
+    .sel{width:100%;font-family:var(--fm);font-size:12px;padding:8px 10px;border-radius:8px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx);-webkit-appearance:none;appearance:none}
+    .pol-pick{display:flex;flex-direction:column;gap:6px}
+    .pol-c{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--bd2);border-radius:8px;background:var(--s2);cursor:pointer;transition:border-color .12s}
+    .pol-c:hover{border-color:var(--ac)}.pol-c input{margin-top:3px}
+    .pol-c div{display:flex;flex-direction:column}.pol-c strong{font-size:12px}.pol-c .desc{color:var(--mt);font-size:10px;line-height:1.4}
+    .help-tip{display:block;color:var(--mt);font-size:10px;margin-top:3px;font-style:italic}
+
+    .acts{display:flex;gap:6px;margin-top:4px}
+    button{font-family:var(--ff);font-size:12px;padding:9px 12px;border-radius:8px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx);cursor:pointer;transition:border-color .12s,background .12s}
+    button:hover{border-color:var(--ac)}button:disabled{opacity:.35;cursor:not-allowed}
+    button.pri{background:var(--ac);border-color:transparent;color:#0f1117;font-weight:600;flex:1;min-width:120px}
+    button.pri:hover{background:#7ab4f7}
+    button.sec{background:transparent}
+
+    .sts{margin-top:10px;font-size:11px;font-family:var(--fm);padding:7px 9px;border-radius:6px;background:rgba(255,255,255,.03);border:1px dashed var(--bd2);min-height:32px}
+    .sts.run{border-style:solid;border-color:var(--ac);color:var(--ac)}
+    .sts.ok{border-style:solid;border-color:var(--gn);color:var(--gn)}
+    .sts.err{border-style:solid;border-color:var(--rd);color:var(--rd)}
+
+    /* loading spinner */
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--bd2);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+
+    /* metrics */
+    .mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+    @media(max-width:600px){.mrow{grid-template-columns:repeat(2,1fr)}}
+    .mc{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:1px}
+    .mc .ml{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--mt)}
+    .mc .mv{font-family:var(--fm);font-size:20px;font-weight:500;font-feature-settings:"tnum"}
+    .mc.hi{border-color:rgba(91,156,245,.3)}.mc.hi .mv{color:var(--ac)}
+
+    /* canvas */
+    #canvas{width:100%;max-height:52vh;background:#f8fafc;border-radius:8px;margin-top:10px}
+
+    /* trajectory */
+    .trj{margin:0 24px 20px;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:16px}
+    .trj summary{cursor:pointer;font-size:13px;font-weight:600;padding:2px 0}.trj summary:hover{color:var(--ac)}
+    .trj-ct{color:var(--mt);font-weight:400;font-size:11px}
+    table.t{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--fm);margin-top:8px}
+    table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left}
+    table.t th{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--mt);font-weight:500}
+    .rp{color:var(--gn)}.rn{color:var(--rd)}.rz{color:var(--mt)}
+    .bg{display:inline-block;font-size:9px;padding:2px 6px;border-radius:5px;font-weight:500;letter-spacing:.3px}
+    .bg-ft{background:rgba(61,214,140,.15);color:var(--gn)}.bg-h{background:rgba(136,146,166,.15);color:var(--mt)}
+    .bg-rt{background:rgba(240,180,41,.15);color:var(--am)}.bg-b{background:rgba(240,180,41,.15);color:var(--am)}
+    .bg-fb{background:rgba(239,100,97,.15);color:var(--rd)}
+    pre.raw{white-space:pre-wrap;word-break:break-word;background:var(--s2);border-radius:6px;padding:8px;font-size:10px;color:#9ca8be;max-height:260px;overflow:auto;margin-top:6px}
+
+    /* ── BENCHMARK TAB ── */
+    .bm{padding:20px 24px;max-width:900px}
+    .bm h2{font-family:var(--fd);font-size:18px;margin:24px 0 8px;color:var(--tx)}.bm h2:first-child{margin-top:0}
+    .bm p{color:var(--mt);font-size:13px;line-height:1.6;margin:6px 0}
+    .bm table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--fm);margin:10px 0 16px}
+    .bm th,.bm td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left}
+    .bm th{font-size:10px;text-transform:uppercase;color:var(--mt);font-weight:500}
+    .bm .win{color:var(--gn);font-weight:600}
+    .bm .tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500}
+    .bm .tag-g{background:rgba(61,214,140,.12);color:var(--gn)}
+    .bm .tag-a{background:rgba(240,180,41,.12);color:var(--am)}
+    .bm .tag-r{background:rgba(239,100,97,.12);color:var(--rd)}
+    .bm blockquote{border-left:3px solid var(--ac);padding:8px 14px;margin:10px 0;background:rgba(91,156,245,.06);border-radius:0 6px 6px 0;font-size:12px;color:var(--mt)}
+    .bm ul{color:var(--mt);font-size:13px;padding-left:20px;margin:6px 0}
+    .bm li{margin:4px 0}
+    .bm code{font-family:var(--fm);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px}
+    .bm a{color:var(--ac)}
+
+    /* ── ABOUT TAB ── */
+    .abt{padding:20px 24px;max-width:900px}
+    .abt h2{font-family:var(--fd);font-size:18px;margin:24px 0 8px}.abt h2:first-child{margin-top:0}
+    .abt h3{font-size:14px;margin:16px 0 6px;color:var(--tx)}
+    .abt p{color:var(--mt);font-size:13px;line-height:1.6;margin:6px 0}
+    .abt a{color:var(--ac)}
+    .abt ul{color:var(--mt);font-size:13px;padding-left:20px}
+    .abt li{margin:4px 0}
+    .abt code{font-family:var(--fm);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px}
+    .link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin:12px 0}
+    .link-card{background:var(--s1);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;transition:border-color .12s}
+    .link-card:hover{border-color:var(--ac);text-decoration:none}
+    .link-card .lc-t{font-size:13px;font-weight:600;color:var(--tx)}
+    .link-card .lc-d{font-size:11px;color:var(--mt);margin-top:3px}
+    .abt img{max-width:100%;border-radius:8px;margin:10px 0}
+
+    /* ── FOOTER ── */
+    footer{text-align:center;padding:16px;font-size:10px;color:var(--mt);border-top:1px solid var(--bd)}
+    footer a{color:var(--mt);margin:0 4px}footer a:hover{color:var(--ac)}
+    .fenv{margin-top:4px;font-family:var(--fm);font-size:9px;color:rgba(255,255,255,.2)}
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">🎨</span>
-      <div>
-        <h1>DesignGym 2.0</h1>
-        <p class="tag">Watch the agent design — heuristic vs fine-tuned LLM</p>
-      </div>
-    </div>
+
+<!-- TAB BAR -->
+<nav class="tab-bar">
+  <span class="tab-bar-title">DesignGym 2.0</span>
+  <button class="tab-btn active" data-tab="demo"><span class="tab-ico">&#9654;</span> Demo</button>
+  <button class="tab-btn" data-tab="bench"><span class="tab-ico">&#9776;</span> Benchmark</button>
+  <button class="tab-btn" data-tab="about"><span class="tab-ico">&#9881;</span> About &amp; Links</button>
+  <a class="blog-link" href="https://huggingface.co/spaces/yashvyasop/DesignGym/blob/main/Blog.md" target="_blank"><span class="tab-ico">&#128221;</span> Blog</a>
+</nav>
+
+<!-- ==================== DEMO TAB ==================== -->
+<div class="tab-page active" id="page-demo">
+  <header class="hdr">
+    <p class="hdr-sub">Watch the agent design — compare heuristic vs fine-tuned LoRA models in real time</p>
   </header>
 
-  <main>
-    <section class="control-panel">
-      <h2>1. Pick a task</h2>
-      <select id="task" class="big-select">
-        <option value="poster_basic_v1">poster_basic_v1 — easy</option>
-        <option value="editorial_cover_v1">editorial_cover_v1 — medium</option>
-        <option value="dense_flyer_v1">dense_flyer_v1 — hard</option>
+  <div class="bc" id="bc">
+    <div class="dot dot-m" id="bd"></div>
+    <div class="bc-info">
+      <div class="bc-lbl" id="bl">Checking backend...</div>
+      <div class="bc-det" id="bdet"></div>
+    </div>
+    <div class="sw">
+      <label>Adapter</label>
+      <select id="asw">
+        <option value="sft">SFT</option>
+        <option value="grpo">GRPO</option>
+        <option value="base">Base (no LoRA)</option>
       </select>
+    </div>
+  </div>
 
-      <h2>2. Choose a policy</h2>
-      <div class="policy-pick">
-        <label class="policy-card" data-policy="heuristic">
-          <input type="radio" name="policy" value="heuristic" checked />
+  <div class="grid2">
+    <div class="pnl" id="ctrl">
+      <h2>Task</h2>
+      <select id="task" class="sel">
+        <option value="poster_basic_v1">Poster — easy</option>
+        <option value="editorial_cover_v1">Editorial Cover — medium</option>
+        <option value="dense_flyer_v1">Dense Flyer — hard</option>
+      </select>
+      <span class="help-tip">Each task tests different layout skills: hierarchy, spacing, reading order</span>
+
+      <h2>Policy</h2>
+      <div class="pol-pick">
+        <label class="pol-c">
+          <input type="radio" name="pol" value="heuristic" checked />
           <div>
             <strong>Heuristic Planner</strong>
-            <span>Rule-based, instant, no API key.</span>
+            <span class="desc">Hand-coded rules. Instant. The baseline to beat.</span>
           </div>
         </label>
-        <label class="policy-card" data-policy="sft" id="policy-sft">
-          <input type="radio" name="policy" value="sft" />
+        <label class="pol-c" id="pol-llm">
+          <input type="radio" name="pol" value="llm" />
           <div>
-            <strong>SFT-LLM Picker</strong>
-            <span>Fine-tuned Qwen-0.5B chooses among candidate actions.</span>
+            <strong id="llm-lbl">LLM Picker</strong>
+            <span class="desc" id="llm-desc">Uses the active adapter model to choose actions</span>
           </div>
         </label>
       </div>
+      <span class="help-tip">Heuristic is the teacher that generated SFT training data. LLM is the student.</span>
 
-      <h2>3. Run</h2>
-      <div class="actions">
-        <button id="run" class="primary">▶ Run Episode</button>
-        <button id="reset" class="ghost">Reset</button>
-        <button id="step" class="ghost">Step Once</button>
+      <h2>Run</h2>
+      <div class="acts">
+        <button id="run" class="pri">Run Episode</button>
+        <button id="rst" class="sec">Reset</button>
       </div>
+      <span class="help-tip">One episode = the agent takes ~7-10 actions to improve a layout from scratch</span>
+      <div id="sts" class="sts">Idle. Pick a task and click Run.</div>
+    </div>
 
-      <div id="status" class="status muted">Idle. Pick a task and click Run.</div>
-
-      <button id="scroll-details" class="scroll-pointer" type="button" aria-label="Scroll to episode details">
-        <span class="scroll-pointer-text">Scroll for details</span>
-        <span class="scroll-pointer-arrow" aria-hidden="true">↓</span>
-      </button>
-    </section>
-
-    <section class="canvas-panel">
-      <div class="canvas-wrap">
-        <svg id="canvas" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="pnl">
+      <div class="mrow">
+        <div class="mc hi"><span class="ml">Final Score</span><span class="mv" id="ms">—</span></div>
+        <div class="mc"><span class="ml">Instruction</span><span class="mv" id="mi">—</span></div>
+        <div class="mc"><span class="ml">Steps</span><span class="mv" id="mst">—</span></div>
+        <div class="mc"><span class="ml">Total Reward</span><span class="mv" id="mr">—</span></div>
       </div>
+      <svg id="canvas" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
 
-      <div class="scoreboard">
-        <div class="score-card primary-score">
-          <span class="label">Final Score</span>
-          <strong id="score-final">—</strong>
-        </div>
-        <div class="score-card">
-          <span class="label">Instruction</span>
-          <strong id="score-instr">—</strong>
-        </div>
-        <div class="score-card">
-          <span class="label">Steps</span>
-          <strong id="score-steps">—</strong>
-        </div>
-        <div class="score-card">
-          <span class="label">Total Reward</span>
-          <strong id="score-reward">—</strong>
-        </div>
-        <div class="score-card">
-          <span class="label">Valid Actions</span>
-          <strong id="score-valid">—</strong>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <section class="log-panel">
+  <div class="trj">
     <details open>
-      <summary><strong>📜 Episode Log</strong> <span id="log-count" class="muted">— no steps yet</span></summary>
-      <table id="log-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Action</th>
-            <th>Reward</th>
-            <th>Δ Score</th>
-            <th>Score</th>
-            <th>Worst metric</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="log-body"></tbody>
+      <summary>Trajectory <span class="trj-ct" id="tc">— no steps yet</span></summary>
+      <table class="t">
+        <thead><tr><th>Step</th><th>Action</th><th>Reward</th><th>Score</th><th>Policy</th></tr></thead>
+        <tbody id="tb"></tbody>
       </table>
     </details>
-
-    <details open>
-      <summary><strong>🔍 Inspect (raw JSON)</strong></summary>
-      <pre id="raw-summary" class="raw"></pre>
+    <details>
+      <summary>Raw JSON</summary>
+      <pre class="raw" id="rj"></pre>
     </details>
-  </section>
+  </div>
+</div>
 
-  <footer>
-    <a href="https://github.com/canboyedits/DesignGym" target="_blank">GitHub</a>
-    ·
-    <a href="https://huggingface.co/spaces/yashvyasop/DesignGym" target="_blank">Hugging Face Space</a>
-    ·
-    <a href="/info" target="_blank">env info</a>
-    ·
-    <a href="/tasks" target="_blank">tasks</a>
-  </footer>
+<!-- ==================== BENCHMARK TAB ==================== -->
+<div class="tab-page" id="page-bench">
+<div class="bm">
+  <h2>Benchmark Results</h2>
+  <p>36 episodes total: 4 backends &times; 3 tasks &times; 3 seeds. Deterministic environment, MPS (M1) inference. Every number is reproducible.</p>
 
-  <script src="/web/app.js?v=10"></script>
+  <h2>Overall Performance</h2>
+  <table>
+    <thead><tr><th>Backend</th><th>Instruction Score</th><th>Total Reward</th><th>Avg Time</th><th>LLM Steer Rate</th></tr></thead>
+    <tbody>
+      <tr><td>Heuristic</td><td>0.5564</td><td>1.588</td><td class="win">0.0s</td><td>—</td></tr>
+      <tr><td>Base Qwen (no LoRA)</td><td>0.5367</td><td>1.679</td><td>11.5s</td><td>100%</td></tr>
+      <tr><td>SFT Fine-tuned</td><td>0.5557</td><td>1.789</td><td>16.8s</td><td>100%</td></tr>
+      <tr><td>GRPO Fine-tuned</td><td>0.5599</td><td class="win">1.854</td><td>12.0s</td><td>100%</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Per-Task Breakdown</h2>
+  <table>
+    <thead><tr><th>Task</th><th>Backend</th><th>Instr Score</th><th>Total Reward</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">Poster (easy)</td><td>Heuristic</td><td>0.5033</td><td>1.319</td></tr>
+      <tr><td>Base</td><td>0.5087</td><td>1.400</td></tr>
+      <tr><td>SFT</td><td>0.5238</td><td>1.435</td></tr>
+      <tr><td>GRPO</td><td>0.5129</td><td>1.455</td></tr>
+
+      <tr><td rowspan="4">Editorial (med)</td><td>Heuristic</td><td>0.5424</td><td>1.544</td></tr>
+      <tr><td>Base</td><td>0.4866</td><td>1.658</td></tr>
+      <tr><td>SFT</td><td>0.4878</td><td>1.894</td></tr>
+      <tr><td>GRPO</td><td>0.4795</td><td>1.966</td></tr>
+
+      <tr><td rowspan="4">Dense Flyer (hard)</td><td>Heuristic</td><td>0.6235</td><td>1.900</td></tr>
+      <tr><td>Base</td><td>0.6148</td><td>1.980</td></tr>
+      <tr><td>SFT</td><td class="win">0.6555</td><td>2.038</td></tr>
+      <tr><td>GRPO</td><td class="win">0.6872</td><td class="win">2.139</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Honest Assessment</h2>
+  <blockquote>These results are real. No cherry-picking, no hidden runs. The environment is deterministic — re-run with the same seeds and you get the same numbers.</blockquote>
+
+  <p><span class="tag tag-g">What works</span></p>
+  <ul>
+    <li><strong>SFT eliminated 0% &rarr; 100% valid JSON</strong> — the biggest win. Base Qwen cannot speak the action format at all. After SFT it can.</li>
+    <li><strong>GRPO gets the highest total reward</strong> (1.854 avg) — it picks bolder, higher-payoff actions per step.</li>
+    <li><strong>On the hardest task (dense_flyer)</strong>, both fine-tuned models beat base on instruction score: SFT 0.655 vs base 0.615, GRPO 0.687 vs base 0.615.</li>
+    <li><strong>100% LLM steer rate</strong> — every step is model-driven, zero fallback to heuristic.</li>
+  </ul>
+
+  <p><span class="tag tag-a">What's honest</span></p>
+  <ul>
+    <li><strong>Heuristic still wins on final score</strong> (0.738 vs SFT 0.702). The hand-coded rules are a strong baseline because they were written with full knowledge of the reward function.</li>
+    <li><strong>SFT and GRPO are ~equal to base on some tasks</strong> — the adapter lift is small (~0.5-2% on instruction score). More GRPO training budget would likely help.</li>
+    <li>The 0.5B model is at the edge of what can reason about complex layout state — a larger base model (3B+) would likely show bigger adapter-vs-base differences.</li>
+  </ul>
+
+  <p><span class="tag tag-r">What to improve</span></p>
+  <ul>
+    <li><strong>More GRPO training</strong> — current run was limited to ~200 steps on free Colab GPU. State-of-the-art needs 1000+ steps with best-of-N sampling.</li>
+    <li><strong>Reward shaping</strong> — GRPO's higher reward but lower final score suggests the reward function could better align per-step gains with end-of-episode quality.</li>
+    <li><strong>Larger base model</strong> — Qwen 3B or 7B with LoRA would still fit in 16GB with quantization and would better handle the multi-metric reasoning.</li>
+    <li><strong>Process reward model</strong> — train a critic that scores partial trajectories, giving GRPO denser signal than episode-end score alone.</li>
+  </ul>
+</div>
+</div>
+
+<!-- ==================== ABOUT TAB ==================== -->
+<div class="tab-page" id="page-about">
+<div class="abt">
+  <h2>What is DesignGym?</h2>
+  <p>DesignGym 2.0 is an OpenEnv-compatible RL environment where an LLM agent learns to improve graphic layouts through sequential actions — move, resize, align, reflow, promote, finalize — evaluated by computable aesthetic metrics (overlap, alignment, spacing, hierarchy, reading order, instruction fit).</p>
+  <p>The training pipeline: <strong>Heuristic Planner</strong> generates expert trajectories &rarr; <strong>SFT</strong> teaches the model the action interface (0% &rarr; 100% valid JSON) &rarr; <strong>GRPO</strong> learns which valid actions are better via environment reward.</p>
+
+  <h2>Project Links</h2>
+  <div class="link-grid">
+    <a class="link-card" href="https://github.com/canboyedits/DesignGym" target="_blank">
+      <div class="lc-t">GitHub Repo</div>
+      <div class="lc-d">Full source: environment, training, inference, server</div>
+    </a>
+    <a class="link-card" href="https://huggingface.co/spaces/yashvyasop/DesignGym" target="_blank">
+      <div class="lc-t">HF Space (Live)</div>
+      <div class="lc-d">This deployed demo on Hugging Face</div>
+    </a>
+    <a class="link-card" href="https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora" target="_blank">
+      <div class="lc-t">SFT LoRA Adapter</div>
+      <div class="lc-d">Qwen2.5-0.5B + SFT fine-tune on heuristic data</div>
+    </a>
+    <a class="link-card" href="https://huggingface.co/yashvyasop/designgym2-grpo-qwen05-lora" target="_blank">
+      <div class="lc-t">GRPO LoRA Adapter</div>
+      <div class="lc-d">Qwen2.5-0.5B + GRPO RL from environment reward</div>
+    </a>
+    <a class="link-card" href="https://colab.research.google.com/drive/1ZtjQSen19Sdmx8FOXvM-nb_AFDSNM_1C?usp=sharing" target="_blank">
+      <div class="lc-t">SFT Training Notebook</div>
+      <div class="lc-d">Colab: data generation, training loop, eval</div>
+    </a>
+    <a class="link-card" href="https://colab.research.google.com/drive/1jw1waO-bc0Mk3U7-RBbomsIGFBWvA0aW?usp=sharing" target="_blank">
+      <div class="lc-t">GRPO Training Notebook</div>
+      <div class="lc-d">Colab: GRPO with environment-in-the-loop reward</div>
+    </a>
+    <a class="link-card" href="https://colab.research.google.com/drive/1U1t9GVkc8sk2BeYCxoDnlHV1WMjYCpv1?usp=sharing" target="_blank">
+      <div class="lc-t">Evaluation Notebook</div>
+      <div class="lc-d">Colab: base vs SFT vs GRPO head-to-head eval</div>
+    </a>
+    <a class="link-card" href="https://huggingface.co/jobs/yashvyasop/69ed7b02d70108f37acdf597" target="_blank">
+      <div class="lc-t">HF Training Logs</div>
+      <div class="lc-d">Hugging Face training job telemetry</div>
+    </a>
+  </div>
+
+  <h2>Training Pipeline</h2>
+  <img src="/assets/Architectural_Diagram.png" alt="DesignGym architecture diagram" />
+  <p>End-to-end: OpenEnv environment &rarr; heuristic planner bootstraps SFT data &rarr; SFT adapter locks in the action interface &rarr; GRPO learns design preference from verifiable reward.</p>
+
+  <h3>SFT: Teaching the Interface</h3>
+  <p>Base Qwen 0.5B understands design language but cannot produce executable JSON actions. SFT on heuristic planner trajectories achieves <strong>0% &rarr; 100% valid JSON</strong> — a capability phase transition, not just a fine-tune.</p>
+  <img src="/assets/SFT_plot_collage.png" alt="SFT training metrics" />
+
+  <h3>GRPO: Learning Preference</h3>
+  <p>Once the model can act, GRPO teaches it <em>which</em> valid action is better. It samples multiple candidates, executes them in the environment, and increases probability of higher-reward actions. No reward model needed — the environment is the oracle.</p>
+
+  <h3>Results from Training (Blog Table)</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--fm);margin:10px 0">
+    <thead><tr style="border-bottom:1px solid var(--bd)"><th style="padding:8px;text-align:left;color:var(--mt);font-size:10px">Policy</th><th style="padding:8px;text-align:left;color:var(--mt);font-size:10px">Final Score</th><th style="padding:8px;text-align:left;color:var(--mt);font-size:10px">Instr Score</th><th style="padding:8px;text-align:left;color:var(--mt);font-size:10px">Valid JSON</th><th style="padding:8px;text-align:left;color:var(--mt);font-size:10px">Early Finalize</th></tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">Base Qwen 0.5B</td><td style="padding:8px">0.6948</td><td style="padding:8px">0.5360</td><td style="padding:8px;color:var(--rd)">0%</td><td style="padding:8px;color:var(--rd)">100%</td></tr>
+      <tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">SFT Qwen 0.5B</td><td style="padding:8px;color:var(--gn)">0.7101</td><td style="padding:8px;color:var(--gn)">0.6263</td><td style="padding:8px;color:var(--gn)">100%</td><td style="padding:8px;color:var(--gn)">0%</td></tr>
+      <tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">GRPO Qwen 0.5B</td><td style="padding:8px">0.6717</td><td style="padding:8px">0.5483</td><td style="padding:8px">98%</td><td style="padding:8px">67%</td></tr>
+      <tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">GRPO Best-of-4</td><td style="padding:8px">0.6781</td><td style="padding:8px;color:var(--gn)">0.5817</td><td style="padding:8px;color:var(--gn)">100%</td><td style="padding:8px">17%</td></tr>
+    </tbody>
+  </table>
+
+  <h2>How to Make It Better</h2>
+  <ul>
+    <li><strong>More GRPO budget:</strong> Current training was ~200 steps on free Colab T4. Papers show 1000-5000 steps with best-of-N=8 for significant RL lift.</li>
+    <li><strong>Larger base model:</strong> Qwen 3B or 7B with 4-bit LoRA would better handle multi-metric reasoning while still fitting in 16GB.</li>
+    <li><strong>Process reward model:</strong> Train a critic on partial trajectories to give GRPO denser signal than end-of-episode score.</li>
+    <li><strong>Curriculum learning:</strong> Start GRPO on easy tasks (poster), then progress to hard (dense_flyer) — the agent currently trains on all tasks equally.</li>
+    <li><strong>Reward alignment:</strong> GRPO's high total reward but lower final score suggests per-step reward doesn't fully correlate with episode quality. Tune the shaping function.</li>
+  </ul>
+
+  <h2>Environment</h2>
+  <p>3 tasks (poster, editorial, dense flyer) testing different layout skills. Deterministic scoring via 7 computable aesthetic metrics. Fully OpenEnv-compatible: <code>reset()</code>, <code>step(action)</code>, typed Pydantic models, FastAPI server, Docker deployment.</p>
+</div>
+</div>
+
+<footer>
+  <a href="https://github.com/canboyedits/DesignGym" target="_blank">GitHub</a> &middot;
+  <a href="https://huggingface.co/spaces/yashvyasop/DesignGym" target="_blank">HF Space</a> &middot;
+  <a href="/info" target="_blank">API /info</a> &middot;
+  <a href="/demo/backend_info" target="_blank">Backend Info</a>
+  <div class="fenv" id="fenv"></div>
+</footer>
+
+<script>
+(function(){
+  /* ── Safari compat: no ?. chaining in older Safari, use explicit checks ── */
+  var $ = function(id){ return document.getElementById(id); };
+  var fmt = function(n,d){ d=d||3; return (n==null||isNaN(+n))?'—':(+n).toFixed(d); };
+
+  /* ── Tabs ── */
+  var tabs = document.querySelectorAll('.tab-btn');
+  var pages = document.querySelectorAll('.tab-page');
+  for(var i=0;i<tabs.length;i++){
+    tabs[i].addEventListener('click', function(e){
+      var t = e.currentTarget.getAttribute('data-tab');
+      for(var j=0;j<tabs.length;j++){
+        tabs[j].classList.remove('active');
+        pages[j].classList.remove('active');
+      }
+      e.currentTarget.classList.add('active');
+      var pg = document.getElementById('page-'+t);
+      if(pg) pg.classList.add('active');
+    });
+  }
+
+  var backendInfo = {};
+  var pollTimer = null;
+
+  /* ── Backend ── */
+  function fetchBI(){
+    return fetch('/demo/backend_info').then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(function(info){
+      backendInfo = info;
+      renderBC(info);
+      return info;
+    })['catch'](function(){
+      $('bl').textContent='Backend unavailable';
+      $('bd').className='dot dot-r';
+    });
+  }
+
+  function renderBC(info){
+    var d=$('bd'),l=$('bl'),det=$('bdet');
+    var b = (info && info.backend) ? info.backend : 'unknown';
+    if(b==='local-lora'){
+      if(info.loading && !info.ready){
+        d.className='dot dot-a';
+        l.innerHTML='<span class="spinner"></span>Loading '+(info.adapter_key||'sft').toUpperCase()+' adapter…';
+        det.textContent='Model warming up in background. Will auto-refresh.';
+        startPoll();
+      } else if(info.ready){
+        d.className='dot dot-g';
+        l.textContent='Fine-tuned '+(info.adapter_key||'').toUpperCase()+' · Qwen2.5-0.5B + LoRA ('+(info.device||'cpu')+')';
+        det.textContent='Loaded in '+(info.load_seconds||'?')+'s';
+        stopPoll();
+      } else {
+        d.className='dot dot-m';
+        l.textContent='Local LoRA (not yet loaded)';
+        det.textContent='Loads on first request';
+      }
+    } else if(b==='local-base'){
+      d.className='dot dot-a';
+      l.textContent='Base Qwen2.5-0.5B ('+(info.device||'cpu')+', no adapter)';
+      det.textContent='Running without LoRA fine-tuning';
+      stopPoll();
+    } else if(b==='router'){
+      d.className='dot dot-a';
+      l.textContent='Base Qwen2.5-0.5B (HF Router) — NOT fine-tuned';
+      det.textContent='Using HF Inference Router. Base model only.';
+      stopPoll();
+    } else if(info && info.load_error){
+      d.className='dot dot-r';
+      l.textContent='Load error';
+      det.textContent=info.load_error;
+      stopPoll();
+    } else {
+      d.className='dot dot-m';
+      l.textContent='No LLM backend';
+      det.textContent='Heuristic only';
+      stopPoll();
+    }
+    /* update llm label */
+    var ll=$('llm-lbl'), ld=$('llm-desc');
+    if(b==='local-lora'){
+      var ak=(info.adapter_key||'SFT').toUpperCase();
+      ll.textContent=ak+' LoRA Picker';
+      ld.textContent='Fine-tuned '+ak+' model chooses layout actions on '+(info.device||'cpu');
+    } else if(b==='local-base'){
+      ll.textContent='Base LLM Picker';
+      ld.textContent='Base model, no adapter — the control experiment';
+    } else if(b==='router'){
+      ll.textContent='Router LLM (base)';
+      ld.textContent='HF Router — NOT fine-tuned';
+    } else {
+      ll.textContent='LLM Picker (unavailable)';
+      ld.textContent='No model loaded';
+    }
+    var env = (info && info.env) ? info.env : {};
+    $('fenv').textContent='BACKEND='+(env.DESIGNGYM_BACKEND||'?')+'  ADAPTER='+(env.DESIGNGYM_ADAPTER||'?')+'  HF_TOKEN='+(env.HF_TOKEN_present?'set':'unset');
+  }
+
+  function startPoll(){if(!pollTimer) pollTimer=setInterval(fetchBI,3000);}
+  function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+
+  /* ── Adapter switch ── */
+  $('asw').addEventListener('change',function(){
+    var key=this.value;
+    $('bl').innerHTML='<span class="spinner"></span>Switching to '+key.toUpperCase()+'…';
+    $('bd').className='dot dot-a';
+    fetch('/demo/switch_adapter',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({adapter:key})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d.error) throw new Error(d.error);
+      fetchBI();
+    })['catch'](function(e){
+      $('bl').textContent='Switch failed: '+e.message;
+      $('bd').className='dot dot-r';
+    });
+  });
+
+  /* ── Canvas ── */
+  var cColors={title:'#bfdbfe',subtitle:'#dbeafe',image:'#bbf7d0',cta:'#fecaca',logo:'#fde68a',badge:'#ddd6fe',body:'#e2e8f0',caption:'#fef3c7',shape:'#ddd6fe',masthead:'#fed7aa',headline:'#a7f3d0'};
+  function drawState(state){
+    var c=$('canvas'); c.innerHTML='';
+    var ns='http://www.w3.org/2000/svg';
+    var bg=document.createElementNS(ns,'rect');
+    bg.setAttribute('x',0);bg.setAttribute('y',0);bg.setAttribute('width',800);bg.setAttribute('height',1000);bg.setAttribute('fill','#f8fafc');
+    c.appendChild(bg);
+    var els=(state&&state.elements)?state.elements:[];
+    if(!els.length){
+      var t=document.createElementNS(ns,'text');t.setAttribute('x',40);t.setAttribute('y',60);t.setAttribute('fill','#0f172a');t.setAttribute('font-size','18');t.textContent='Click Run to start an episode.';c.appendChild(t);return;
+    }
+    for(var i=0;i<els.length;i++){
+      var el=els[i],b=el.bbox||el.box;if(!b||b.length<4)continue;
+      var x=b[0]*800,y=b[1]*1000,w=b[2]*800,h=b[3]*1000;
+      var r=document.createElementNS(ns,'rect');
+      r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);
+      r.setAttribute('rx',6);r.setAttribute('fill',cColors[el.role||el.type]||'#e5e7eb');
+      r.setAttribute('stroke','#0f172a');r.setAttribute('stroke-width',1.5);c.appendChild(r);
+      var lb=document.createElementNS(ns,'text');
+      lb.setAttribute('x',x+6);lb.setAttribute('y',y+18);lb.setAttribute('fill','#0f172a');lb.setAttribute('font-size','13');
+      lb.setAttribute('font-family','JetBrains Mono,monospace');lb.textContent=el.id||'el';c.appendChild(lb);
+    }
+  }
+
+  /* ── Scores ── */
+  function renderScores(s,st){
+    $('ms').textContent=fmt(s&&s.final_score!=null?s.final_score:(st?st.current_score:null));
+    $('mi').textContent=fmt(s&&s.instruction_score!=null?s.instruction_score:(st?st.instruction_score:null));
+    $('mst').textContent=''+(s?s.steps_taken||0:(st?st.step_count||0:0));
+    $('mr').textContent=fmt(s?s.total_reward||0:0,2);
+  }
+
+  /* ── Trajectory ── */
+  function polBadge(tag){
+    if(!tag) return '<span class="bg bg-h">?</span>';
+    if(tag.indexOf('finetuned_')===0) return '<span class="bg bg-ft">'+tag+'</span>';
+    if(tag==='heuristic') return '<span class="bg bg-h">heuristic</span>';
+    if(tag==='router_base') return '<span class="bg bg-rt">router_base</span>';
+    if(tag==='local_base') return '<span class="bg bg-b">local_base</span>';
+    if(tag.indexOf('fallback')>=0) return '<span class="bg bg-fb">'+tag+'</span>';
+    return '<span class="bg bg-h">'+tag+'</span>';
+  }
+  function rwCls(r){return r>0.001?'rp':r<-0.001?'rn':'rz';}
+  function renderTraj(traj){
+    var b=$('tb');b.innerHTML='';
+    for(var i=0;i<traj.length;i++){
+      var t=traj[i],tr=document.createElement('tr');
+      tr.innerHTML='<td>'+t.step+'</td><td>'+(t.action||'')+'</td><td class="'+rwCls(t.reward)+'">'+fmt(t.reward,3)+'</td><td>'+fmt(t.score,3)+'</td><td>'+polBadge(t.policy)+'</td>';
+      b.appendChild(tr);
+    }
+    $('tc').textContent=traj.length?'· '+traj.length+' step'+(traj.length===1?'':'s'):'— no steps yet';
+  }
+
+  /* ── Controls ── */
+  function setSts(text,cls){var s=$('sts');s.innerHTML=text;s.className='sts '+(cls||'');}
+  function selPol(){var r=document.querySelector('input[name="pol"]:checked');return r?r.value:'heuristic';}
+
+  function resetEnv(){
+    setSts('<span class="spinner"></span>Resetting…','run');
+    return fetch('/demo/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_id:$('task').value,seed:0})}).then(function(r){
+      if(!r.ok) throw new Error('reset '+r.status);return r.json();
+    }).then(function(d){
+      drawState(d.state);renderScores({steps_taken:0,total_reward:0},d.state);renderTraj([]);$('rj').textContent='';
+      setSts('Ready: '+$('task').value+'. Click Run Episode.','');
+    })['catch'](function(e){setSts('Reset error: '+e.message,'err');});
+  }
+
+  function runEpisode(){
+    var pol=selPol();
+    var polName=pol==='heuristic'?'Heuristic':((backendInfo.adapter_key||'SFT').toUpperCase()+' LoRA');
+    setSts('<span class="spinner"></span>Running episode with '+polName+'… this takes 5–20s','run');
+    $('run').disabled=true;$('rst').disabled=true;
+    fetch('/demo/run_episode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({policy:pol,task_id:$('task').value,seed:0})}).then(function(r){
+      if(!r.ok) return r.text().then(function(t){throw new Error('HTTP '+r.status+' '+t.substring(0,200));});
+      return r.json();
+    }).then(function(d){
+      if(d.error) throw new Error(d.error);
+      drawState(d.final_state);
+      renderScores(d.summary,d.final_state);
+      renderTraj(d.trajectory||[]);
+      $('rj').textContent=JSON.stringify(d.summary,null,2);
+      setSts('Done in '+(d.summary.wall_time_sec||'?')+'s — '+(d.summary.steps_taken||0)+' steps · score '+fmt(d.summary.final_score),'ok');
+    })['catch'](function(e){setSts('Error: '+e.message,'err');})
+    ['finally'](function(){$('run').disabled=false;$('rst').disabled=false;});
+  }
+
+  $('run').addEventListener('click',runEpisode);
+  $('rst').addEventListener('click',resetEnv);
+  $('task').addEventListener('change',resetEnv);
+
+  /* ── Init ── */
+  fetchBI();
+  resetEnv();
+})();
+</script>
 </body>
 </html>

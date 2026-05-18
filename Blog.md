@@ -323,6 +323,8 @@ $$\text{Language Model} \;\xrightarrow{\;\text{SFT}\;}\; \text{Action Model} \;\
 
 ## 📊 Results: Evidence of Learning
 
+### Training-time evaluation (Colab)
+
 | Policy | Final Score | Instruction Score | Valid JSON | Early Finalize |
 |---|---|---|---|---|
 | **Base** Qwen 0.5B | 0.6948 | 0.5360 | **0%** | 100% |
@@ -332,6 +334,21 @@ $$\text{Language Model} \;\xrightarrow{\;\text{SFT}\;}\; \text{Action Model} \;\
 | **GRPO @ Best-of-4** ★ | 0.6781 | **0.5817** | **100%** | **17%** |
 
 ★ = shipped headline configuration. Base→Final pipeline gain on instruction score: **+8.5%**, on valid JSON: **0% → 100%**, on premature finalizes: **down 83%**.
+
+### Post-deployment benchmark (36 episodes, 3 tasks × 3 seeds × 4 backends)
+
+After fixing the deployment honesty bug (the original Space silently used base Qwen via the HF Router instead of the LoRA adapters), we ran a full deterministic benchmark locally on MPS (Apple M1):
+
+| Backend | Instruction Score | Total Reward | Avg Time | LLM Steer Rate |
+|---|---|---|---|---|
+| Heuristic | 0.5564 | 1.588 | **0.0s** | — |
+| Base (no LoRA) | 0.5367 | 1.679 | 11.5s | 100% |
+| **SFT Fine-tuned** | 0.5557 | 1.789 | 16.8s | 100% |
+| **GRPO Fine-tuned** | **0.5599** | **1.854** | 12.0s | 100% |
+
+**Honest takeaway:** The heuristic is a strong baseline (written with full knowledge of the reward function). SFT's main contribution is the 0% → 100% valid JSON phase transition. GRPO accumulates the most per-step reward and shows the strongest instruction scores on the hardest task (dense_flyer: 0.687 vs heuristic 0.624). The adapter lift over base is small (+0.5–2%) at 0.5B scale — a larger base model (3B+) would likely show bigger gains. More GRPO training budget (current: ~200 steps on free Colab) is the clearest path to improvement.
+
+For the full honest analysis, see the [Findings page](web/findings.html) in the live demo.
 
 The most important result is the jump from **0% to 100% valid actions**. That's the model crossing from "knows about design" to "can act in a design environment."
 

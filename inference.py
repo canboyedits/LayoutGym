@@ -39,6 +39,8 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 # MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct:scaleway")
 
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-0.5B-Instruct")
+# When DESIGNGYM_BACKEND=local the actual model is resolved by local_model.get_client();
+# MODEL_NAME is then informational only (used in prompt metadata).
 
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
@@ -506,23 +508,43 @@ def get_model_action_sync(
             temperature=TEMPERATURE,
             max_tokens=MAX_TOKENS,
         )
-
-        text = (completion.choices[0].message.content or "").strip()
-        payload = json.loads(text)
-        choice = int(payload["choice"])
-
-        if choice < 0 or choice >= len(candidates):
-            return best_local
-
-        selected = candidates[choice]
-
-        if selected.action_type == "finalize" and not should_allow_finalize(step, obs, recent_rewards):
-            return best_local
-
-        return selected
-
-    except Exception:
+    except Exception as e:
+        print(f"LLM-FAIL transport: {type(e).__name__}: {e}", flush=True)
         return best_local
+
+    text = (completion.choices[0].message.content or "").strip()
+    backend = getattr(completion, "backend", "router")
+
+    try:
+        payload = json.loads(text)
+        if isinstance(payload, int):
+            choice = payload
+        elif isinstance(payload, dict):
+            choice = int(payload["choice"])
+        else:
+            choice = int(payload)
+    except Exception as e:
+        m = re.search(r'\{\s*"choice"\s*:\s*(\d+)\s*\}', text)
+        if m:
+            choice = int(m.group(1))
+        elif text.strip().isdigit():
+            choice = int(text.strip())
+        else:
+            print(f"LLM-FAIL parse ({backend}): {type(e).__name__} on {text!r}", flush=True)
+            return best_local
+
+    if choice < 0 or choice >= len(candidates):
+        print(f"LLM-FAIL bounds ({backend}): {choice} not in [0,{len(candidates)})", flush=True)
+        return best_local
+
+    selected = candidates[choice]
+
+    if selected.action_type == "finalize" and not should_allow_finalize(step, obs, recent_rewards):
+        print(f"LLM-FAIL bad_finalize ({backend})", flush=True)
+        return best_local
+
+    print(f"LLM-OK ({backend}) choice={choice} action={selected.canonical()}", flush=True)
+    return selected
 
 
 async def run_task(client: Optional[OpenAI], task_name: str) -> None:
@@ -595,7 +617,17 @@ async def run_task(client: Optional[OpenAI], task_name: str) -> None:
 
 
 async def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN) if HF_TOKEN else None
+    backend = os.getenv("DESIGNGYM_BACKEND", "local")
+    if backend == "local":
+        from local_model import get_client, describe_client
+        client = get_client()
+        print(f"[client] local  {describe_client(client)}", flush=True)
+    elif backend == "router" and HF_TOKEN:
+        client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+        print(f"[client] router base={API_BASE_URL} model={MODEL_NAME}", flush=True)
+    else:
+        client = None
+        print("[client] none -> heuristic-only", flush=True)
 
     for task_name in TASKS_TO_RUN:
         await run_task(client, task_name)
