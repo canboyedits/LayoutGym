@@ -1,16 +1,3 @@
----
-title: Designgym Environment Server
-emoji: 📟
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
-app_port: 8000
-base_path: /web
-tags:
-  - openenv
----
-
 # 🎨 DesignGym 2.0 — Teaching an LLM to Think Like a Designer
 
 > *What if a machine didn't just generate a layout — but learned how to improve one?*
@@ -63,7 +50,7 @@ DesignGym proves this framework works for graphic design. The architecture is a 
 | Resource | Link |
 |---|---|
 | 🌍 **Environment (HF Space)** | [DesignGym Environment Server](https://huggingface.co/spaces/yashvyasop/DesignGym) |
-| 💻 **GitHub Repo** | [canboyedits/DesignGym](https://github.com/canboyedits/DesignGym/tree/round2-designgym-2) |
+| 💻 **GitHub Repo** | [canboyedits/DesignGym](https://github.com/canboyedits/DesignGym) |
 | 🧠 **SFT Trained Adapter** | [designgym2-sft-qwen05-lora](https://huggingface.co/yashvyasop/designgym2-sft-qwen05-lora) |
 | 📓 **GRPO Training Notebook** | [grpo_train_colab.ipynb](https://colab.research.google.com/drive/1jw1waO-bc0Mk3U7-RBbomsIGFBWvA0aW?usp=sharing) |
 | 📓 **SFT Training Notebook** | [SFT_training_script.ipynb](https://colab.research.google.com/drive/1ZtjQSen19Sdmx8FOXvM-nb_AFDSNM_1C?usp=sharing) |
@@ -336,6 +323,8 @@ $$\text{Language Model} \;\xrightarrow{\;\text{SFT}\;}\; \text{Action Model} \;\
 
 ## 📊 Results: Evidence of Learning
 
+### Training-time evaluation (Colab)
+
 | Policy | Final Score | Instruction Score | Valid JSON | Early Finalize |
 |---|---|---|---|---|
 | **Base** Qwen 0.5B | 0.6948 | 0.5360 | **0%** | 100% |
@@ -345,6 +334,21 @@ $$\text{Language Model} \;\xrightarrow{\;\text{SFT}\;}\; \text{Action Model} \;\
 | **GRPO @ Best-of-4** ★ | 0.6781 | **0.5817** | **100%** | **17%** |
 
 ★ = shipped headline configuration. Base→Final pipeline gain on instruction score: **+8.5%**, on valid JSON: **0% → 100%**, on premature finalizes: **down 83%**.
+
+### Post-deployment benchmark (36 episodes, 3 tasks × 3 seeds × 4 backends)
+
+After fixing the deployment honesty bug (the original Space silently used base Qwen via the HF Router instead of the LoRA adapters), we ran a full deterministic benchmark locally on MPS (Apple M1):
+
+| Backend | Instruction Score | Total Reward | Avg Time | LLM Steer Rate |
+|---|---|---|---|---|
+| Heuristic | 0.5564 | 1.588 | **0.0s** | — |
+| Base (no LoRA) | 0.5367 | 1.679 | 11.5s | 100% |
+| **SFT Fine-tuned** | 0.5557 | 1.789 | 16.8s | 100% |
+| **GRPO Fine-tuned** | **0.5599** | **1.854** | 12.0s | 100% |
+
+**Honest takeaway:** The heuristic is a strong baseline (written with full knowledge of the reward function). SFT's main contribution is the 0% → 100% valid JSON phase transition. GRPO accumulates the most per-step reward and shows the strongest instruction scores on the hardest task (dense_flyer: 0.687 vs heuristic 0.624). The adapter lift over base is small (+0.5–2%) at 0.5B scale — a larger base model (3B+) would likely show bigger gains. More GRPO training budget (current: ~200 steps on free Colab) is the clearest path to improvement.
+
+For the full honest analysis, see the [Findings page](web/findings.html) in the live demo.
 
 The most important result is the jump from **0% to 100% valid actions**. That's the model crossing from "knows about design" to "can act in a design environment."
 
@@ -480,4 +484,3 @@ The final vision: models that don't just generate designs — but **learn how to
 
 *Built for the OpenEnv Hackathon · India 2026*  
 *Math rendered with [KaTeX](https://katex.org/) / [MathJax](https://www.mathjax.org/)*
-
